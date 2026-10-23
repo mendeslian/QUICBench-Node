@@ -1,0 +1,28 @@
+{
+  "tags": {
+    "proto": "h3",
+    "endpoint": "echo",
+    "load": 50,
+    "rep": 6,
+    "seed": "afb2199f",
+    "network_profile": "clean",
+    "timestamp": "2026-10-01T14:15:46.0535641Z",
+    "tool": "curl-http3-docker"
+  },
+  "metrics": {
+    "http_req_duration_p50": 299.91200000000003,
+    "http_req_duration_p90": 1185.631,
+    "http_req_duration_p95": 1521.784,
+    "http_req_duration_avg": 472.7812671380868,
+    "http_req_waiting_p50": 299.91200000000003,
+    "http_req_waiting_p90": 1185.631,
+    "http_req_waiting_p95": 1521.784,
+    "http_reqs_rate": 84.85,
+    "http_reqs_count": 5091,
+    "data_received_rate": null,
+    "data_sent_rate": null,
+    "http_req_failed_rate": 0,
+    "iteration_duration_p95": 1521.784,
+    "observed_proto": "HTTP/3"
+  }
+}

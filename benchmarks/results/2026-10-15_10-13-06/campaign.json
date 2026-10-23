@@ -1,0 +1,14 @@
+{
+  "ramp_sec": 5,
+  "network_profiles": "clean,lag_100ms,loss_1pct,lag_100ms_loss_1pct",
+  "proto": "all",
+  "started_at": "2026-10-15T13:13:06.9169879Z",
+  "tool": "k6+curl-http3",
+  "load": 50,
+  "endpoint": "ping",
+  "cooldown_sec": 0,
+  "duration_sec": 30,
+  "reps": 10,
+  "campaign": "degraded_r06",
+  "seed": "648c3fbf"
+}

@@ -1,0 +1,78 @@
+{
+  "name": "quicbench-node",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "nodemon --exec tsx src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "proxy:up": "docker compose up -d --build nginx",
+    "proxy:down": "docker compose down",
+    "dev:nginx": "concurrently -k -n proxy,api \"docker compose up --build nginx\" \"nodemon --exec tsx src/server.ts\"",
+    "start:nginx": "npm run proxy:up && npm run build && node dist/server.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "test:cov": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "bench:run": "PATH=\"/usr/local/microsoft/powershell/7-preview:${PATH}\" pwsh -File benchmarks/scripts/run-all.ps1",
+    "bench:degraded": "PATH=\"/usr/local/microsoft/powershell/7-preview:${PATH}\" pwsh -File benchmarks/scripts/run-degraded.ps1",
+    "bench:agg": "tsx benchmarks/scripts/aggregate.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mendeslian/QUICBench-Node.git"
+  },
+  "keywords": [],
+  "author": "Lian Mendes",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  },
+  "bugs": {
+    "url": "https://github.com/mendeslian/QUICBench-Node/issues"
+  },
+  "homepage": "https://github.com/mendeslian/QUICBench-Node#readme",
+  "dependencies": {
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "pino": "^9.9.5",
+    "pino-http": "^10.5.0",
+    "pino-pretty": "^13.1.2",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.30.1",
+    "@types/compression": "^1.8.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.3.0",
+    "@types/supertest": "^7.2.1",
+    "@typescript-eslint/eslint-plugin": "^8.68.0",
+    "@typescript-eslint/parser": "^8.68.0",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.30.1",
+    "globals": "^15.15.0",
+    "jest": "^30.4.2",
+    "nodemon": "^3.1.10",
+    "prettier": "^3.6.2",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.12",
+    "tsx": "^4.23.12",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.68.0"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "all"
+  }
+}

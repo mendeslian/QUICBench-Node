@@ -1,0 +1,74 @@
+# Lab de benchmark com rede degradada (R06, L04=B).
+#
+# Diferente do docker-compose.yml (modo host, API no host + NGINX em container),
+# aqui API e NGINX rodam como containers na mesma rede Docker `bench`, permitindo
+# aplicar `tc netem` no egress cliente-facing de cada um (ver benchmarks/netem).
+#
+# Uso:
+#   docker compose -f docker-compose.bench.yml up --build -d
+#   bash benchmarks/netem/apply.sh lag_100ms
+#   npm run bench:degraded
+#   bash benchmarks/netem/clear.sh
+#   docker compose -f docker-compose.bench.yml down
+#
+# IPs fixos: os scripts de netem excluem o IP do peer interno (hop NGINX<->API)
+# do impairment, degradando apenas o trafego voltado ao cliente.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: infra/api/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - BENCHMARK_MODE=true
+      - LOG_LEVEL=info
+    ports:
+      - "3000:3000/tcp"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://localhost:3000/bench/ping',(r)=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>process.exit(r.statusCode===200?0:1))}).on('error',()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    cap_add:
+      - NET_ADMIN
+    networks:
+      bench:
+        ipv4_address: 172.30.0.10
+
+  nginx:
+    build:
+      context: .
+      dockerfile: infra/nginx/Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - "8443:8443/tcp"
+      - "8443:8443/udp"
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./infra/nginx/nginx.bench.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx/certs:/etc/nginx/certs
+    networks:
+      bench:
+        ipv4_address: 172.30.0.20
+
+networks:
+  bench:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+          gateway: 172.30.0.1

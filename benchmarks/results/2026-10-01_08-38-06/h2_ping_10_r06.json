@@ -1,0 +1,28 @@
+{
+  "tags": {
+    "proto": "h2",
+    "endpoint": "ping",
+    "load": 10,
+    "rep": 6,
+    "seed": "afb2199f",
+    "network_profile": "clean",
+    "timestamp": "2026-10-01T14:01:26.786Z",
+    "tool": "k6"
+  },
+  "metrics": {
+    "http_req_duration_p50": null,
+    "http_req_duration_p90": 7.56772,
+    "http_req_duration_p95": 8.162029999999998,
+    "http_req_duration_avg": 4.648127092538541,
+    "http_req_waiting_p50": null,
+    "http_req_waiting_p90": 7.5417,
+    "http_req_waiting_p95": 8.1172,
+    "http_reqs_rate": 1942.9947351755059,
+    "http_reqs_count": 136019,
+    "data_received_rate": 1426559.3794091474,
+    "data_sent_rate": 73598.13045563403,
+    "http_req_failed_rate": 0,
+    "iteration_duration_p95": 8.322939999999997,
+    "observed_proto": "rate"
+  }
+}

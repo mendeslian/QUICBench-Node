@@ -1,0 +1,14 @@
+# Padrão de services (estilo NestJS)
+#
+# Cada service deve ter um arquivo co-localizado:
+#   src/services/foo.service.ts
+#   src/services/foo.service.spec.ts
+#
+# Exemplo de estrutura de teste:
+#
+#   describe('FooService — <regra de negócio>')
+#     it('deve <comportamento esperado> quando <condição>')
+#
+# Testes devem validar contratos e regras de negócio de forma
+# determinística, para que implementações (incluindo geradas por IA)
+# possam ser verificadas automaticamente.

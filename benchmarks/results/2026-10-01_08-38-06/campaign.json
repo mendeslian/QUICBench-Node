@@ -1,0 +1,12 @@
+{
+  "seed": "afb2199f",
+  "network_profile": "clean",
+  "tool": "k6+curl-http3",
+  "reps": 10,
+  "proto": "all",
+  "cooldown_sec": 180,
+  "duration_sec": 60,
+  "ramp_sec": 10,
+  "campaign": "ideal_matrix",
+  "started_at": "2026-10-01T11:38:06.7349980Z"
+}
