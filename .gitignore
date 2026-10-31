@@ -16,3 +16,4 @@ benchmarks/results/*
 !benchmarks/results/.gitkeep
 !benchmarks/results/2026-10-01_08-38-06/
 !benchmarks/results/2026-10-15_10-13-06/
+!benchmarks/results/probe-h3-client-split/

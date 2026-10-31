@@ -1,0 +1,9 @@
+{
+  "started_at": "2026-10-31T22:06:19.9232051Z",
+  "ended_at": "2026-10-31T22:07:20.9920698Z",
+  "since_arg": "2026-10-31T22:06:17Z",
+  "nginx_container_id": "44e686f009c46d2eb72eb46261b1a229a2f7328b01a55710d332705b006d6629",
+  "load": 50,
+  "duration_sec": 60,
+  "container_name": "h3-client-probe"
+}

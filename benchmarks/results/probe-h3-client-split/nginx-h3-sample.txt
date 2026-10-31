@@ -1,0 +1,5 @@
+2026-10-31T22:06:27.459988644Z 172.30.0.1 - [31/Oct/2026:22:06:27 +0000] "GET /bench/ping HTTP/3.0" 200 protocol="HTTP/3.0" h3="h3" request_time="0.017" upstream_time="0.017"
+2026-10-31T22:06:27.502799561Z 172.30.0.1 - [31/Oct/2026:22:06:27 +0000] "GET /bench/ping HTTP/3.0" 200 protocol="HTTP/3.0" h3="h3" request_time="0.006" upstream_time="0.006"
+2026-10-31T22:06:27.502818233Z 172.30.0.1 - [31/Oct/2026:22:06:27 +0000] "GET /bench/ping HTTP/3.0" 200 protocol="HTTP/3.0" h3="h3" request_time="0.005" upstream_time="0.005"
+2026-10-31T22:06:27.512450846Z 172.30.0.1 - [31/Oct/2026:22:06:27 +0000] "GET /bench/ping HTTP/3.0" 200 protocol="HTTP/3.0" h3="h3" request_time="0.006" upstream_time="0.006"
+2026-10-31T22:06:27.515334149Z 172.30.0.1 - [31/Oct/2026:22:06:27 +0000] "GET /bench/ping HTTP/3.0" 200 protocol="HTTP/3.0" h3="h3" request_time="0.005" upstream_time="0.005"
