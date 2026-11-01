@@ -21,7 +21,8 @@
     "format:check": "prettier . --check",
     "bench:run": "PATH=\"/usr/local/microsoft/powershell/7-preview:${PATH}\" pwsh -File benchmarks/scripts/run-all.ps1",
     "bench:degraded": "PATH=\"/usr/local/microsoft/powershell/7-preview:${PATH}\" pwsh -File benchmarks/scripts/run-degraded.ps1",
-    "bench:agg": "tsx benchmarks/scripts/aggregate.ts"
+    "bench:agg": "tsx benchmarks/scripts/aggregate.ts",
+    "bench:compare": "tsx benchmarks/scripts/compare-h2-h3.ts"
   },
   "repository": {
     "type": "git",

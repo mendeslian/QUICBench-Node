@@ -151,6 +151,12 @@ Saídas (dentro da pasta da campanha agregada):
 - `summary.json`
 - `summary.csv`
 
+A mediana e o IQR descrevem a célula. Para comparar HTTP/2 com HTTP/3 na mesma condição (endpoint, VUs e perfil de rede), use `npm run bench:compare`. O script lê os JSON da campanha e grava `h2-h3-tests.csv` e `h2-h3-tests.json`, com U de Mann-Whitney da amostra HTTP/2, delta de Cliff e p bilateral das métricas `http_req_duration_p95` e `http_reqs_rate`. O p é exato quando nenhum valor de HTTP/2 coincide com um valor de HTTP/3.
+
+```bash
+npm run bench:compare -- benchmarks/results/2026-10-15_10-13-06
+```
+
 ### 4. Execução individual (k6)
 
 ```bash

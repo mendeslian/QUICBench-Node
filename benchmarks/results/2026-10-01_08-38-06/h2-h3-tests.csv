@@ -1,0 +1,15 @@
+endpoint,load,network_profile,metric,n_h2,n_h3,u_h2,cliffs_delta,p,p_method
+ping,10,clean,http_req_duration_p95,10,10,0,-1,0.0000108250882245,exact
+ping,10,clean,http_reqs_rate,10,10,100,1,0.0000108250882245,exact
+ping,50,clean,http_req_duration_p95,10,10,0,-1,0.0000108250882245,exact
+ping,50,clean,http_reqs_rate,10,10,100,1,0.0000108250882245,exact
+ping,100,clean,http_req_duration_p95,10,10,0,-1,0.0000108250882245,exact
+ping,100,clean,http_reqs_rate,10,10,100,1,0.0000108250882245,exact
+payload_1kb,50,clean,http_req_duration_p95,10,10,0,-1,0.0000108250882245,exact
+payload_1kb,50,clean,http_reqs_rate,10,10,100,1,0.0000108250882245,exact
+payload_100kb,50,clean,http_req_duration_p95,10,10,0,-1,0.0000108250882245,exact
+payload_100kb,50,clean,http_reqs_rate,10,10,100,1,0.0000108250882245,exact
+payload_1mb,50,clean,http_req_duration_p95,10,10,0,-1,0.0000108250882245,exact
+payload_1mb,50,clean,http_reqs_rate,10,10,100,1,0.0000108250882245,exact
+echo,50,clean,http_req_duration_p95,10,10,0,-1,0.0000108250882245,exact
+echo,50,clean,http_reqs_rate,10,10,100,1,0.0000108250882245,exact

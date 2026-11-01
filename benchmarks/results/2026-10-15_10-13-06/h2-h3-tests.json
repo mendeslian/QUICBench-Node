@@ -1,0 +1,98 @@
+[
+  {
+    "endpoint": "ping",
+    "load": 50,
+    "network_profile": "clean",
+    "metric": "http_req_duration_p95",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 0,
+    "cliffs_delta": -1,
+    "p": 0.00001082508822446903,
+    "p_method": "exact"
+  },
+  {
+    "endpoint": "ping",
+    "load": 50,
+    "network_profile": "clean",
+    "metric": "http_reqs_rate",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 100,
+    "cliffs_delta": 1,
+    "p": 0.00001082508822446903,
+    "p_method": "exact"
+  },
+  {
+    "endpoint": "ping",
+    "load": 50,
+    "network_profile": "lag_100ms",
+    "metric": "http_req_duration_p95",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 0,
+    "cliffs_delta": -1,
+    "p": 0.00001082508822446903,
+    "p_method": "exact"
+  },
+  {
+    "endpoint": "ping",
+    "load": 50,
+    "network_profile": "lag_100ms",
+    "metric": "http_reqs_rate",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 100,
+    "cliffs_delta": 1,
+    "p": 0.00001082508822446903,
+    "p_method": "exact"
+  },
+  {
+    "endpoint": "ping",
+    "load": 50,
+    "network_profile": "loss_1pct",
+    "metric": "http_req_duration_p95",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 0,
+    "cliffs_delta": -1,
+    "p": 0.00001082508822446903,
+    "p_method": "exact"
+  },
+  {
+    "endpoint": "ping",
+    "load": 50,
+    "network_profile": "loss_1pct",
+    "metric": "http_reqs_rate",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 100,
+    "cliffs_delta": 1,
+    "p": 0.00001082508822446903,
+    "p_method": "exact"
+  },
+  {
+    "endpoint": "ping",
+    "load": 50,
+    "network_profile": "lag_100ms_loss_1pct",
+    "metric": "http_req_duration_p95",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 0,
+    "cliffs_delta": -1,
+    "p": 0.00001082508822446903,
+    "p_method": "exact"
+  },
+  {
+    "endpoint": "ping",
+    "load": 50,
+    "network_profile": "lag_100ms_loss_1pct",
+    "metric": "http_reqs_rate",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 100,
+    "cliffs_delta": 1,
+    "p": 0.00001082508822446903,
+    "p_method": "exact"
+  }
+]
