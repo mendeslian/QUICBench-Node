@@ -94,7 +94,13 @@ function Write-ProbeSummary {
 
     $requestTimes = New-Object System.Collections.Generic.List[double]
     $upstreamTimes = New-Object System.Collections.Generic.List[double]
+    $deltas = New-Object System.Collections.Generic.List[double]
+    $zeroUpstream = New-Object System.Collections.Generic.List[double]
+    $zeroTimeLocals = New-Object System.Collections.Generic.List[string]
     $above100 = 0
+    $deltaEqual = 0
+    $deltaPlus1 = 0
+    $deltaMinus1 = 0
     $maxRequestMs = $null
     $maxRequestUpstreamMs = $null
     foreach ($line in $h3Lines) {
@@ -113,6 +119,21 @@ function Write-ProbeSummary {
             $maxRequestMs = $requestMs
             $maxRequestUpstreamMs = $upstreamMs
         }
+        if ($null -ne $requestMs -and $null -ne $upstreamMs) {
+            # Resolução do log é 1 ms; o arredondamento evita ruído de double na diferença.
+            $deltaMs = [Math]::Round($requestMs - $upstreamMs, 3)
+            $deltas.Add($deltaMs)
+            if ($deltaMs -eq 0) { $deltaEqual++ }
+            elseif ($deltaMs -eq 1) { $deltaPlus1++ }
+            elseif ($deltaMs -eq -1) { $deltaMinus1++ }
+            # request_time 0,000 s com upstream acima de 1 ms: fora do empate e do desvio de 1 ms.
+            if ($requestMs -eq 0 -and $deltaMs -lt -1) {
+                $zeroUpstream.Add($upstreamMs)
+                if ($line -match '\[([^\]]+)\]') {
+                    $zeroTimeLocals.Add($Matches[1])
+                }
+            }
+        }
     }
     if ($requestTimes.Count -eq 0) {
         throw "Linhas HTTP/3 sem request_time (campo usado: $matchField)."
@@ -120,6 +141,37 @@ function Write-ProbeSummary {
 
     $reqSorted = @($requestTimes | Sort-Object)
     $upSorted = @($upstreamTimes | Sort-Object)
+    $deltaSorted = @($deltas | Sort-Object)
+    $zeroUpstreamSorted = @($zeroUpstream | Sort-Object)
+    $zeroTimeLocal = $null
+    $zeroTimeLocalUnique = @($zeroTimeLocals | Select-Object -Unique)
+    if ($zeroTimeLocalUnique.Count -eq 1) {
+        $zeroTimeLocal = [string]$zeroTimeLocalUnique[0]
+    }
+    $nonH3 = 0
+    $nonH3Status = $null
+    $nonH3RequestMs = $null
+    $nonH3UpstreamMs = $null
+    foreach ($line in $nginxLines) {
+        if (-not $line) { continue }
+        if (Get-H3Field -Line $line) { continue }
+        $nonH3++
+        if ($nonH3 -gt 1) {
+            $nonH3Status = $null
+            $nonH3RequestMs = $null
+            $nonH3UpstreamMs = $null
+            continue
+        }
+        if ($line -match ' (\d+) protocol=') {
+            $nonH3Status = [int]$Matches[1]
+        }
+        if ($line -match 'request_time="([0-9]+(?:\.[0-9]+)?)"') {
+            $nonH3RequestMs = [double]::Parse($Matches[1], $inv) * 1000.0
+        }
+        if ($line -match 'upstream_time="([^"]*)"' -and $Matches[1] -match '([0-9]+(?:\.[0-9]+)?)') {
+            $nonH3UpstreamMs = [double]::Parse($Matches[1], $inv) * 1000.0
+        }
+    }
 
     $clientRaw = Get-Content -Path $stdoutPath -Raw
     $jsonLine = $null
@@ -176,6 +228,20 @@ function Write-ProbeSummary {
         upstream_time_p95_ms = & $round3 (Get-RankPercentile -Sorted $upSorted -P 95)
         upstream_time_min_ms = & $round3 $(if ($upSorted.Length -gt 0) { $upSorted[0] } else { $null })
         upstream_time_max_ms = & $round3 $(if ($upSorted.Length -gt 0) { $upSorted[$upSorted.Length - 1] } else { $null })
+        delta_n = $deltas.Count
+        delta_p50_ms = & $round3 $(if ($deltaSorted.Length -gt 0) { Get-RankPercentile -Sorted $deltaSorted -P 50 } else { $null })
+        delta_p95_ms = & $round3 $(if ($deltaSorted.Length -gt 0) { Get-RankPercentile -Sorted $deltaSorted -P 95 } else { $null })
+        delta_equal_n = $deltaEqual
+        delta_plus_1ms_n = $deltaPlus1
+        delta_minus_1ms_n = $deltaMinus1
+        request_time_zero_n = $zeroUpstream.Count
+        request_time_zero_upstream_min_ms = & $round3 $(if ($zeroUpstreamSorted.Length -gt 0) { $zeroUpstreamSorted[0] } else { $null })
+        request_time_zero_upstream_max_ms = & $round3 $(if ($zeroUpstreamSorted.Length -gt 0) { $zeroUpstreamSorted[$zeroUpstreamSorted.Length - 1] } else { $null })
+        request_time_zero_time_local = $zeroTimeLocal
+        nginx_non_h3_lines = $nonH3
+        nginx_non_h3_status = $nonH3Status
+        nginx_non_h3_request_time_ms = & $round3 $nonH3RequestMs
+        nginx_non_h3_upstream_time_ms = & $round3 $nonH3UpstreamMs
         client_http_req_duration_p50_ms = & $round3 $client.http_req_duration_p50
         client_http_req_duration_p95_ms = & $round3 $client.http_req_duration_p95
         client_http_req_duration_avg_ms = & $round3 $client.http_req_duration_avg
@@ -187,7 +253,9 @@ function Write-ProbeSummary {
         cpu_note = 'docker stats CPU%: 100% equivale a um nucleo'
     }
 
-    $summary | ConvertTo-Json -Depth 4 | Set-Content -Path $summaryPath -Encoding utf8
+    $summaryJson = ($summary | ConvertTo-Json -Depth 4) + [Environment]::NewLine
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($summaryPath, $summaryJson, $utf8NoBom)
     Write-Host "[probe] campo HTTP/3: $matchField; linhas=$($h3Lines.Count); amostras CPU=$($cpuValues.Count)"
     Write-Host "[probe] resumo: $summaryPath"
     return $summary
