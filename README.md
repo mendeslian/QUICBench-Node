@@ -41,10 +41,10 @@ Lian Mendes
 O Node.js não suporta HTTP/3 nativamente. A simulação usa um proxy reverso:
 
 ```text
-Cliente --HTTP/3 (QUIC/UDP)--> NGINX :8443 --HTTP/1.1--> API Node :3000
+Cliente --HTTP/1.1, HTTP/2 ou HTTP/3--> NGINX :8443 --HTTP/1.1--> API Node :3000
 ```
 
-- **Cliente → NGINX**: HTTP/3 (ou HTTP/2 via TLS na mesma porta 8443)
+- **Cliente → NGINX**: HTTP/1.1 (ALPN `http/1.1`), HTTP/2 (ALPN `h2`) ou HTTP/3 (QUIC) na porta 8443
 - **NGINX → Node**: HTTP/1.1 (`proxy_pass` para `host.docker.internal:3000`)
 - O header `Alt-Svc` anuncia HTTP/3 para clientes compatíveis
 

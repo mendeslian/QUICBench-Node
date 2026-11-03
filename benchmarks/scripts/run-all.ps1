@@ -55,9 +55,10 @@ function Assert-Command {
 }
 
 function Test-StackHealthy {
-    $codeH1 = curl.exe -s -o NUL -w '%{http_code}' http://localhost:3000/bench/ping 2>$null
-    $codeH2 = curl.exe -k -s -o NUL -w '%{http_code}' https://localhost:8443/bench/ping 2>$null
-    return ($codeH1 -eq '200' -and $codeH2 -eq '200')
+    $codeApi = (curl.exe -s -o NUL -w '%{http_code}' http://localhost:3000/bench/ping 2>$null).Trim()
+    $codeNginx = (curl.exe -k -s -o NUL -w '%{http_code}' https://localhost:8443/bench/ping 2>$null).Trim()
+    $h1Probe = (curl.exe -k --http1.1 -s -o NUL -w '%{http_code} %{http_version}' https://localhost:8443/bench/ping 2>$null).Trim()
+    return ($codeApi -eq '200' -and $codeNginx -eq '200' -and $h1Probe -eq '200 1.1')
 }
 
 function Assert-StackHealthy {
@@ -70,7 +71,7 @@ function Assert-StackHealthy {
         Write-Host "Aguardando stack saudavel (tentativa $i/$Attempts)..."
         Start-Sleep -Seconds $DelaySec
     }
-    throw 'Stack nao saudavel: http://localhost:3000/bench/ping ou https://localhost:8443/bench/ping'
+    throw 'Stack nao saudavel: http://localhost:3000/bench/ping ou https://localhost:8443/bench/ping (HTTP/1.1 na 8443 deve responder http_version 1.1)'
 }
 
 function Restart-BenchStack {
@@ -133,11 +134,31 @@ function Invoke-K6Scenario {
     }
     $k6Args += (Join-Path $k6Dir $Script)
 
-    Write-Host "[k6] $ProtoName $Endpoint load=$Load rep=$Rep"
-    & $k6 @k6Args
-    if ($LASTEXITCODE -ne 0) {
+    $previousGodebug = $env:GODEBUG
+    $k6Exit = 0
+    try {
+        if ($ProtoName -eq 'h1') {
+            $env:GODEBUG = 'http2client=0'
+        }
+
+        Write-Host "[k6] $ProtoName $Endpoint load=$Load rep=$Rep"
+        & $k6 @k6Args
+        $k6Exit = $LASTEXITCODE
         if (Test-Path $outFile) {
-            Write-Warning "k6 exit=$LASTEXITCODE mas summary gravado: $outFile (continuando)"
+            Assert-ObservedProto -SummaryPath $outFile -ProtoName $ProtoName
+        }
+    }
+    finally {
+        if ([string]::IsNullOrEmpty($previousGodebug)) {
+            Remove-Item Env:GODEBUG -ErrorAction SilentlyContinue
+        } else {
+            $env:GODEBUG = $previousGodebug
+        }
+    }
+
+    if ($k6Exit -ne 0) {
+        if (Test-Path $outFile) {
+            Write-Warning "k6 exit=$k6Exit mas summary gravado: $outFile (continuando)"
         } else {
             throw "k6 falhou: $Script ($ProtoName $Endpoint rep=$Rep)"
         }

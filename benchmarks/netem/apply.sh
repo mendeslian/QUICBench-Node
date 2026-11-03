@@ -6,8 +6,9 @@
 # via filtro u32 que envia o trafego destinado ao IP do peer para uma banda
 # limpa (1:1), enquanto todo o resto cai na banda com netem (1:3).
 #
-# Assim H/1.1, H/2 e H/3 recebem a mesma degradacao na perna cliente<->servidor,
-# sem penalizar em dobro o caminho do proxy.
+# H/1.1, H/2 e H/3 entram pelo NGINX na porta 8443. A degradacao da perna
+# cliente<->servidor cai no egress do NGINX. O hop NGINX<->API fica isento,
+# para o proxy nao receber o impairment duas vezes.
 #
 # Uso: bash benchmarks/netem/apply.sh <clean|lag_100ms|loss_1pct|lag_100ms_loss_1pct>
 

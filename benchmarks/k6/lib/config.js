@@ -1,9 +1,11 @@
 import { Counter } from 'k6/metrics';
 
-const observedProto = new Counter('observed_proto');
+const observedHttp11 = new Counter('observed_http11');
+const observedHttp20 = new Counter('observed_http20');
+const observedProtoOther = new Counter('observed_proto_other');
 
 const PROTO_URLS = {
-  h1: () => __ENV.BASE_URL_H1 || 'http://localhost:3000',
+  h1: () => __ENV.BASE_URL_H1 || 'https://localhost:8443',
   h2: () => __ENV.BASE_URL_H2 || 'https://localhost:8443',
 };
 
@@ -43,7 +45,7 @@ export function buildOptions(overrides = {}) {
     },
   };
 
-  if (proto === 'h2') {
+  if (proto === 'h1' || proto === 'h2') {
     options.insecureSkipTLSVerify = true;
   }
 
@@ -51,11 +53,19 @@ export function buildOptions(overrides = {}) {
 }
 
 export function trackProto(res) {
-  if (!res?.proto) {
+  if (res?.proto === 'HTTP/1.1') {
+    observedHttp11.add(1);
     return;
   }
 
-  observedProto.add(1, { proto: res.proto });
+  if (res?.proto === 'HTTP/2.0') {
+    observedHttp20.add(1);
+    return;
+  }
+
+  if (res?.proto) {
+    observedProtoOther.add(1);
+  }
 }
 
 function percentile(values, p) {
@@ -88,21 +98,30 @@ function buildTags() {
   };
 }
 
+function metricCount(data, name) {
+  const count = data?.metrics?.[name]?.values?.count;
+  return typeof count === 'number' ? count : 0;
+}
+
 function inferObservedProto(data) {
-  const counter = data?.metrics?.observed_proto?.values;
-  if (!counter) {
+  const http11 = metricCount(data, 'observed_http11');
+  const http20 = metricCount(data, 'observed_http20');
+  const other = metricCount(data, 'observed_proto_other');
+  const present = [http11 > 0, http20 > 0, other > 0].filter(Boolean).length;
+
+  if (present !== 1) {
     return null;
   }
 
-  const entries = Object.entries(counter).filter(([key]) => key !== 'count');
-  if (!entries.length) {
-    return null;
+  if (http11 > 0) {
+    return 'HTTP/1.1';
   }
 
-  entries.sort((a, b) => b[1] - a[1]);
-  const top = entries[0][0];
-  const match = top.match(/proto:([^,}]+)/);
-  return match ? match[1] : top;
+  if (http20 > 0) {
+    return 'HTTP/2.0';
+  }
+
+  return null;
 }
 
 export function extractMetrics(data) {

@@ -130,10 +130,28 @@ function Invoke-K6Ping {
     }
     $k6Args += (Join-Path $k6Dir 'ping.js')
 
-    Write-Host "[k6] $ProtoName $endpoint load=$Load profile=$NetworkProfile rep=$Rep"
-    & k6 @k6Args
-    if ($LASTEXITCODE -ne 0) {
-        throw "k6 falhou: $ProtoName $endpoint profile=$NetworkProfile rep=$Rep"
+    $previousGodebug = $env:GODEBUG
+    try {
+        if ($ProtoName -eq 'h1') {
+            $env:GODEBUG = 'http2client=0'
+        }
+
+        Write-Host "[k6] $ProtoName $endpoint load=$Load profile=$NetworkProfile rep=$Rep"
+        & k6 @k6Args
+        $k6Exit = $LASTEXITCODE
+        if (Test-Path $outFile) {
+            Assert-ObservedProto -SummaryPath $outFile -ProtoName $ProtoName
+        }
+        if ($k6Exit -ne 0) {
+            throw "k6 falhou: $ProtoName $endpoint profile=$NetworkProfile rep=$Rep"
+        }
+    }
+    finally {
+        if ([string]::IsNullOrEmpty($previousGodebug)) {
+            Remove-Item Env:GODEBUG -ErrorAction SilentlyContinue
+        } else {
+            $env:GODEBUG = $previousGodebug
+        }
     }
 }
 

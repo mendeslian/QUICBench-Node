@@ -44,3 +44,29 @@ function Wait-ForNextReplica {
     Read-Host "Réplica $CompletedRep/$TotalReps concluída. Pressione Enter para iniciar a réplica $next/$TotalReps (resfriamento)."
     Write-Host ''
 }
+
+function Assert-ObservedProto {
+    param(
+        [string]$SummaryPath,
+        [string]$ProtoName
+    )
+
+    $expected = @{
+        h1 = 'HTTP/1.1'
+        h2 = 'HTTP/2.0'
+    }[$ProtoName]
+
+    if (-not $expected) {
+        return
+    }
+
+    if (-not (Test-Path $SummaryPath)) {
+        throw "Summary ausente para checar observed_proto ($ProtoName): $SummaryPath"
+    }
+
+    $summary = Get-Content -Raw -Path $SummaryPath | ConvertFrom-Json
+    $actual = [string]$summary.metrics.observed_proto
+    if ($actual -ne $expected) {
+        throw "observed_proto=$actual em $SummaryPath; esperado $expected para PROTO=$ProtoName"
+    }
+}

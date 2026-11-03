@@ -7,14 +7,14 @@ Roteiro reproduzível para o estudo de caso do TCC (Cap. 4–5). Os scripts mede
 | Lacuna | Decisão |
 |--------|---------|
 | **L01** | 10 / 50 / 100 VUs, 60s por execução, ramp-up 10s |
-| **L03** | H/1.1 em `http://localhost:3000`; H/2 e H/3 em `https://localhost:8443` |
+| **L03** | H/1.1, H/2 e H/3 em `https://localhost:8443`. H/1.1 usa ALPN `http/1.1` (`GODEBUG=http2client=0` no processo do k6). As campanhas `2026-10-01_08-38-06` e `2026-10-15_10-13-06` mediram H/1.1 em `http://localhost:3000` |
 | **L04** | Rede degradada via `tc netem` em Docker (ver seção "Rede degradada (R06)") |
 | **L05** | 30 réplicas por célula (modo `full`); mediana + IQR via `bench:agg` |
 
 ## Arquitetura dos caminhos
 
 ```text
-HTTP/1.1  →  http://localhost:3000/bench/*     (k6, direto na API)
+HTTP/1.1  →  https://localhost:8443/bench/*     (k6, ALPN http/1.1 no NGINX)
 HTTP/2    →  https://localhost:8443/bench/*     (k6, ALPN h2 no NGINX)
 HTTP/3    →  https://localhost:8443/bench/*     (curl HTTP/3 em Docker → NGINX QUIC)
 ```
@@ -25,7 +25,7 @@ HTTP/3    →  https://localhost:8443/bench/*     (curl HTTP/3 em Docker → NGI
 
 - Node.js ≥ 18, Docker, [k6](https://grafana.com/docs/k6/latest/set-up/install-k6/)
 - API com `BENCHMARK_MODE=true` (desabilita rate limiter)
-- Proxy NGINX para H/2 e H/3: `npm run dev:nginx`
+- Proxy NGINX para H/1.1, H/2 e H/3: `npm run dev:nginx`
 
 ### Variáveis de ambiente (`.env`)
 
@@ -40,10 +40,10 @@ BENCHMARK_MODE=true
 Com API + proxy rodando:
 
 ```bash
-# HTTP/1.1 (baseline direto)
-curl -s http://localhost:3000/bench/ping
+# HTTP/1.1 (via NGINX, ALPN http/1.1)
+curl -k -s --http1.1 https://localhost:8443/bench/ping
 
-# HTTP/2 (via NGINX, ALPN)
+# HTTP/2 (via NGINX, ALPN h2)
 curl -k -s --http2 https://localhost:8443/bench/ping
 
 # HTTP/3 (via NGINX QUIC) — requer curl com suporte HTTP/3
@@ -160,7 +160,8 @@ npm run bench:compare -- benchmarks/results/2026-10-15_10-13-06
 ### 4. Execução individual (k6)
 
 ```bash
-k6 run --env PROTO=h1 --env ENDPOINT=ping --env LOAD=50 --env REP=1 \
+# GODEBUG fica no processo do k6. --env nao desliga o HTTP/2.
+GODEBUG=http2client=0 k6 run --env PROTO=h1 --env ENDPOINT=ping --env LOAD=50 --env REP=1 \
   --env OUT=benchmarks/results/h1_ping_50_r01.json \
   benchmarks/k6/ping.js
 
@@ -202,6 +203,8 @@ pwsh benchmarks/http3/run-h3.ps1 -Endpoint echo -Load 50 -BodyBytes 102400 -Rep 
 ```
 
 Métricas alinhadas ao §2.8 do TCC: latência, tempo de resposta (`http_req_duration`), TTFB (`http_req_waiting`), throughput (`data_*_rate`) e req/s (`http_reqs_rate`).
+
+O summary do k6 2.2.0 não exporta a tag de um contador. O script grava `observed_proto` a partir dos contadores `observed_http11` e `observed_http20`. Nos JSON das campanhas arquivadas esse campo ficou `rate`.
 
 A tag `network_profile` identifica o perfil de rede da execução (`clean` por padrão; ver seção abaixo). O agregador agrupa por `(proto, endpoint, load, network_profile)`.
 
@@ -263,9 +266,9 @@ bash benchmarks/netem/clear.sh
 Com o lab no ar e um perfil aplicado, confirme que a latência sobe nos três protocolos:
 
 ```bash
-# H/1.1 (API direta)
-curl -s -o /dev/null -w "h1 time_total=%{time_total}\n" http://localhost:3000/bench/ping
-# H/2 (NGINX)
+# H/1.1 (NGINX, ALPN http/1.1)
+curl -k --http1.1 -s -o /dev/null -w "h1 time_total=%{time_total}\n" https://localhost:8443/bench/ping
+# H/2 (NGINX, ALPN h2)
 curl -k -s -o /dev/null -w "h2 time_total=%{time_total}\n" --http2 https://localhost:8443/bench/ping
 # H/3 (cliente QUIC em Docker)
 docker run --rm --add-host=host.docker.internal:host-gateway alpine/curl-http3 \
@@ -284,7 +287,7 @@ Com `lag_100ms`, `time_total` deve subir ~0.1s acima do `clean` nos três. Se s�
 |----------|------|
 | k6 não encontrado | Instale k6 e reinicie o terminal |
 | `connection refused` em :3000 | Suba a API com `BENCHMARK_MODE=true` |
-| H/2/H/3 falham em :8443 | `npm run dev:nginx` ou `npm run proxy:up` |
+| H/1.1, H/2 ou H/3 falham em :8443 | `npm run dev:nginx` ou `npm run proxy:up` |
 | HTTP/3 Docker falha | Verifique UDP 8443; teste curl manual acima |
 | Rate limit nos testes | Confirme `BENCHMARK_MODE=true` no `.env` |
 | `summary` vazio no agg | Rode `bench:run` antes; JSON na pasta da campanha (`*_rNN.json`); use `bench:agg -- <caminho>` se não for a mais recente |
