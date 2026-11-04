@@ -1,0 +1,5 @@
+docker compose -f docker-compose.bench.yml stop
+docker compose -p quicbench-host -f docker-compose.yml up -d --build nginx
+npm run dev
+docker compose -p quicbench-host -f docker-compose.yml -f %TEMP%\quicbench-tcp-only.yml up -d --force-recreate --no-deps nginx
+docker compose -p quicbench-host -f docker-compose.yml up -d --force-recreate --no-deps nginx

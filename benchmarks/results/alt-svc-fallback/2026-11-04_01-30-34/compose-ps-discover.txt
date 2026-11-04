@@ -1,0 +1,2 @@
+NAME                     IMAGE                  COMMAND                  SERVICE   CREATED          STATUS          PORTS
+quicbench-host-nginx-1   quicbench-host-nginx   "/entrypoint.sh ngin…"   nginx     12 seconds ago   Up 11 seconds   0.0.0.0:8443->8443/tcp, 0.0.0.0:8443->8443/udp, [::]:8443->8443/tcp, [::]:8443->8443/udp

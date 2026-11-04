@@ -55,6 +55,34 @@ docker run --rm --add-host=host.docker.internal:host-gateway alpine/curl-http3 \
 
 Confirme `res.proto` no k6: `HTTP/1.1` para H/1.1 e `HTTP/2.0` para H/2.
 
+## Alt-Svc e fallback
+
+Sonda de 4 de novembro de 2026, no modo host. A API subiu com `npm run dev`. O NGINX subiu com `docker compose -p quicbench-host -f docker-compose.yml up -d --build nginx`, publicando 8443/tcp e 8443/udp. O cliente foi a imagem `alpine/curl-http3` (curl 8.11.0-DEV, quiche 0.22.0). Os arquivos estão em `benchmarks/results/alt-svc-fallback/2026-11-04_01-30-34/`. O script `benchmarks/http3/check-alt-svc.ps1` grava cabeçalhos, corpo, verbose, `http_version` e o access log.
+
+```powershell
+pwsh -File benchmarks/http3/check-alt-svc.ps1 -Phase discover
+```
+
+A fase `discover` faz duas chamadas a `https://host.docker.internal:8443/bench/ping`. A primeira é `curl -k --http2 --alt-svc`, com cache vazio. A segunda repete a URL com o mesmo cache, sem `--http2` e sem `--http3`. Nessa pasta, o access log às 04:30:36 UTC tem `protocol="HTTP/2.0"` e `h3=""`. Às 04:30:39 UTC tem `protocol="HTTP/3.0"` e `h3="h3"`. As duas respostas trouxeram `alt-svc: h3=":8443"; ma=2592000` e `{"ok":true}`. O arquivo `nginx-2.txt` também contém a linha das 04:30:36 UTC.
+
+A terceira chamada usou o cache já gravado, com o NGINX recriado só em TCP. O override está em `tcp-only.override.yml` nessa pasta. Na execução ele foi passado a partir de `%TEMP%\quicbench-tcp-only.yml`, com o mesmo conteúdo.
+
+```powershell
+docker compose -p quicbench-host -f docker-compose.yml -f %TEMP%\quicbench-tcp-only.yml up -d --force-recreate --no-deps nginx
+pwsh -File benchmarks/http3/check-alt-svc.ps1 -Phase fallback -OutDir benchmarks/results/alt-svc-fallback/2026-11-04_01-30-34
+```
+
+`compose-ps-fallback.txt` lista só `8443/tcp`. A requisição terminou com `http_version=2`, status 200, `protocol="HTTP/2.0"` e `h3=""`, às 04:31:17 UTC. O verbose dessa chamada não tem linha de erro QUIC.
+
+A publicação dos dois protocolos voltou em seguida. A checagem usa `--http3-only` e não usa `--alt-svc`.
+
+```powershell
+docker compose -p quicbench-host -f docker-compose.yml up -d --force-recreate --no-deps nginx
+pwsh -File benchmarks/http3/check-alt-svc.ps1 -Phase restore-check -OutDir benchmarks/results/alt-svc-fallback/2026-11-04_01-30-34
+```
+
+Às 04:31:57 UTC o access log registrou `protocol="HTTP/3.0"` e `h3="h3"`, status 200.
+
 ## Estrutura
 
 ```text

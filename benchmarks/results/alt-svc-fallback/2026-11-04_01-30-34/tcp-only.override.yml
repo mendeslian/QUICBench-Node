@@ -1,0 +1,4 @@
+services:
+  nginx:
+    ports: !override
+      - "8443:8443/tcp"

@@ -1,0 +1,13 @@
+docker compose -p quicbench-host -f docker-compose.yml ps --all
+docker run --rm --entrypoint curl alpine/curl-http3 -V
+touch /out/altsvc.txt
+curl -k --connect-timeout 15 --max-time 30 --http2 --alt-svc /out/altsvc.txt -D /out/headers-1.txt -o /out/body-1.txt -w 'http_version=%{http_version}\nhttp_code=%{http_code}\n' -v https://host.docker.internal:8443/bench/ping > /out/writeout-1.txt 2> /out/verbose-1.txt; ec=$?; echo $ec > /out/exit-1.txt; exit $ec
+docker compose -p quicbench-host -f docker-compose.yml logs --no-color --timestamps --since 2026-11-04T01:30:33-03:00 nginx
+curl -k --connect-timeout 15 --max-time 30 --alt-svc /out/altsvc.txt -D /out/headers-2.txt -o /out/body-2.txt -w 'http_version=%{http_version}\nhttp_code=%{http_code}\n' -v https://host.docker.internal:8443/bench/ping > /out/writeout-2.txt 2> /out/verbose-2.txt; ec=$?; echo $ec > /out/exit-2.txt; exit $ec
+docker compose -p quicbench-host -f docker-compose.yml logs --no-color --timestamps --since 2026-11-04T01:30:34-03:00 nginx
+docker compose -p quicbench-host -f docker-compose.yml ps --all
+curl -k --connect-timeout 15 --max-time 30 --alt-svc /out/altsvc.txt -D /out/headers-3.txt -o /out/body-3.txt -w 'http_version=%{http_version}\nhttp_code=%{http_code}\n' -v https://host.docker.internal:8443/bench/ping > /out/writeout-3.txt 2> /out/verbose-3.txt; ec=$?; echo $ec > /out/exit-3.txt; exit $ec
+docker compose -p quicbench-host -f docker-compose.yml logs --no-color --timestamps --since 2026-11-04T01:31:12-03:00 nginx
+docker compose -p quicbench-host -f docker-compose.yml ps --all
+curl -k --connect-timeout 15 --max-time 30 --http3-only -D /out/headers-restore.txt -o /out/body-restore.txt -w 'http_version=%{http_version}\nhttp_code=%{http_code}\n' -v https://host.docker.internal:8443/bench/ping > /out/writeout-restore.txt 2> /out/verbose-restore.txt; ec=$?; echo $ec > /out/exit-restore.txt; exit $ec
+docker compose -p quicbench-host -f docker-compose.yml logs --no-color --timestamps --since 2026-11-04T01:31:53-03:00 nginx
