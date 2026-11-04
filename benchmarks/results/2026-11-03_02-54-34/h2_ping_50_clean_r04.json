@@ -1,0 +1,28 @@
+{
+  "tags": {
+    "proto": "h2",
+    "endpoint": "ping",
+    "load": 50,
+    "rep": 4,
+    "seed": "01fd7e86",
+    "network_profile": "clean",
+    "timestamp": "2026-11-03T06:08:44.522Z",
+    "tool": "h2load"
+  },
+  "metrics": {
+    "http_req_duration_p50": 22.836542,
+    "http_req_duration_p90": 27.437602,
+    "http_req_duration_p95": 30.207916,
+    "http_req_duration_avg": 23.7794063,
+    "http_req_waiting_p50": null,
+    "http_req_waiting_p90": null,
+    "http_req_waiting_p95": null,
+    "http_reqs_rate": 2101.73333,
+    "http_reqs_count": 126104,
+    "data_received_rate": 1490128,
+    "data_sent_rate": null,
+    "http_req_failed_rate": 0,
+    "iteration_duration_p95": null,
+    "observed_proto": "HTTP/2.0"
+  }
+}

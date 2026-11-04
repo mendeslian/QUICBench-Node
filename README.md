@@ -89,7 +89,7 @@ npm run proxy:down
 - `npm run proxy:down`: derruba o proxy NGINX
 - `npm run lint`: checagem de lint
 - `npm run format`: formata o projeto
-- `npm run bench:run`: executa matriz de benchmarks (k6 + HTTP/3); ver [benchmarks/README.md](benchmarks/README.md)
+- `npm run bench:run`: executa a matriz com h2load (HTTP/1.1, HTTP/2 e HTTP/3); ver [benchmarks/README.md](benchmarks/README.md)
 - `npm run bench:degraded`: executa a matriz sob rede degradada (`tc netem` em Docker, R06); requer `docker compose -f docker-compose.bench.yml up -d`
 - `npm run bench:agg`: agrega a campanha mais recente (mediana + IQR → `summary.csv` na pasta datada); ver [benchmarks/README.md](benchmarks/README.md)
 
@@ -100,7 +100,7 @@ Os registros das campanhas usadas no TCC estão versionados em `benchmarks/resul
 - `2026-10-01_08-38-06`: matriz ideal (rede limpa; 210 execuções)
 - `2026-10-15_10-13-06`: rede degradada com `tc netem` (120 execuções)
 
-Pré-requisitos para reexecutar: Docker, PowerShell 7 (`pwsh`), k6 e Node.js >= 18. Passo a passo, parâmetros e matriz experimental em [benchmarks/README.md](benchmarks/README.md).
+Pré-requisitos para reexecutar: Docker, PowerShell 7 (`pwsh`) e Node.js >= 18. O gerador é o h2load na imagem `quicbench-h2load:1.70.0`. Passo a passo, parâmetros e matriz experimental em [benchmarks/README.md](benchmarks/README.md).
 
 ## Licença
 

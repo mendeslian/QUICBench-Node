@@ -12,7 +12,7 @@ param(
     [int]$Ramp = 10,
     [string]$Seed = '',
 
-    [int]$CooldownSec = 600,
+    [int]$CooldownSec = 180,
 
     [string]$ComposeFile = 'docker-compose.bench.yml',
 
@@ -24,8 +24,7 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'campaign.ps1')
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
-$k6Dir = Join-Path $repoRoot 'benchmarks\k6'
-$h3Script = Join-Path $repoRoot 'benchmarks\http3\run-h3.ps1'
+$h2loadScript = Join-Path $repoRoot 'benchmarks\h2load\run-h2load.ps1'
 
 $reps = if ($Reps -gt 0) { $Reps } elseif ($RepsMode -eq 'full') { 30 } else { 3 }
 if (-not $Seed) {
@@ -35,16 +34,21 @@ if (-not $Seed) {
 $resultsDir = New-CampaignResultsDir -RepoRoot $repoRoot
 
 Write-CampaignManifest -CampaignDir $resultsDir -Metadata @{
-    campaign   = 'ideal_matrix'
-    tool       = 'k6+curl-http3'
-    network_profile = 'clean'
-    seed       = $Seed
-    reps       = $reps
-    duration_sec = $Duration
-    ramp_sec   = $Ramp
-    cooldown_sec = if ($NoPause) { 0 } else { $CooldownSec }
-    proto      = $Proto
-    started_at = (Get-Date).ToUniversalTime().ToString('o')
+    campaign                = 'ideal_matrix'
+    tool                    = 'h2load'
+    network_profile         = 'clean'
+    seed                    = $Seed
+    reps                    = $reps
+    duration_sec            = $Duration
+    warmup_sec              = $Ramp
+    cooldown_sec            = if ($NoPause) { 0 } else { $CooldownSec }
+    proto                   = $Proto
+    base_url                = 'https://nginx:8443'
+    clients                 = '-c = load'
+    max_concurrent_streams  = 1
+    threads                 = 1
+    nginx_keepalive_requests = 1000000
+    started_at              = (Get-Date).ToUniversalTime().ToString('o')
 }
 
 function Assert-Command {
@@ -92,188 +96,94 @@ function Ensure-StackHealthyBeforeReplica {
     Assert-StackHealthy -Attempts 15 -DelaySec 4
 }
 
-function Get-K6Path {
-    if (Get-Command k6 -ErrorAction SilentlyContinue) {
-        return 'k6'
-    }
-    throw 'k6 nao encontrado. Instale: https://grafana.com/docs/k6/latest/set-up/install-k6/'
-}
-
-function Invoke-K6Scenario {
+function Invoke-H2LoadScenario {
     param(
-        [string]$Script,
         [string]$ProtoName,
-        [string]$Endpoint,
-        [int]$Load,
-        [int]$Rep,
-        [hashtable]$ExtraEnv = @{}
-    )
-
-    $outFile = Join-Path $resultsDir "${ProtoName}_${Endpoint}_${Load}_r$($Rep.ToString('00')).json"
-    $k6 = Get-K6Path
-
-    $envArgs = @{
-        PROTO    = $ProtoName
-        ENDPOINT = $Endpoint
-        LOAD     = "$Load"
-        RAMP     = "$Ramp"
-        DURATION = "$Duration"
-        REP      = "$Rep"
-        SEED     = $Seed
-        OUT      = $outFile
-    }
-
-    foreach ($key in $ExtraEnv.Keys) {
-        $envArgs[$key] = $ExtraEnv[$key]
-    }
-
-    $k6Args = @('run', '--no-thresholds')
-    foreach ($pair in $envArgs.GetEnumerator()) {
-        $k6Args += '--env'
-        $k6Args += "$($pair.Key)=$($pair.Value)"
-    }
-    $k6Args += (Join-Path $k6Dir $Script)
-
-    $previousGodebug = $env:GODEBUG
-    $k6Exit = 0
-    try {
-        if ($ProtoName -eq 'h1') {
-            $env:GODEBUG = 'http2client=0'
-        }
-
-        Write-Host "[k6] $ProtoName $Endpoint load=$Load rep=$Rep"
-        & $k6 @k6Args
-        $k6Exit = $LASTEXITCODE
-        if (Test-Path $outFile) {
-            Assert-ObservedProto -SummaryPath $outFile -ProtoName $ProtoName
-        }
-    }
-    finally {
-        if ([string]::IsNullOrEmpty($previousGodebug)) {
-            Remove-Item Env:GODEBUG -ErrorAction SilentlyContinue
-        } else {
-            $env:GODEBUG = $previousGodebug
-        }
-    }
-
-    if ($k6Exit -ne 0) {
-        if (Test-Path $outFile) {
-            Write-Warning "k6 exit=$k6Exit mas summary gravado: $outFile (continuando)"
-        } else {
-            throw "k6 falhou: $Script ($ProtoName $Endpoint rep=$Rep)"
-        }
-    }
-}
-
-function Invoke-H3Scenario {
-    param(
         [string]$EndpointKind,
         [string]$EndpointTag,
         [int]$Load,
         [int]$Rep,
         [string]$Size = '1kb',
-        [int]$BodyBytes = 102400
+        [int]$BodyBytes = 0,
+        [string]$NetworkProfile = 'clean'
     )
 
-    $outFile = Join-Path $resultsDir "h3_${EndpointTag}_${Load}_r$($Rep.ToString('00')).json"
+    $outFile = Join-Path $resultsDir "${ProtoName}_${EndpointTag}_${Load}_r$($Rep.ToString('00')).json"
 
-    & $h3Script `
+    & $h2loadScript `
+        -Proto $ProtoName `
         -Endpoint $EndpointKind `
+        -EndpointTag $EndpointTag `
         -Load $Load `
         -Duration $Duration `
+        -Warmup $Ramp `
         -Rep $Rep `
         -Size $Size `
         -BodyBytes $BodyBytes `
         -Out $outFile `
-        -Seed $Seed
+        -Seed $Seed `
+        -NetworkProfile $NetworkProfile `
+        -ComposeFile $ComposeFile
+
+    if (Test-Path $outFile) {
+        Assert-ObservedProto -SummaryPath $outFile -ProtoName $ProtoName
+    }
 }
 
-# Matriz experimental
 $pingLoads = @(10, 50, 100)
 $payloadSizes = @('1kb', '100kb', '1mb')
 $payloadLoad = 50
 $echoLoad = 50
 
-$k6Cells = @()
+$cells = @()
 foreach ($load in $pingLoads) {
-    $k6Cells += @{ Script = 'ping.js'; Endpoint = 'ping'; Load = $load; Extra = @{} }
+    $cells += @{ Kind = 'ping'; Tag = 'ping'; Load = $load; Size = '1kb'; BodyBytes = 0 }
 }
 foreach ($size in $payloadSizes) {
-    $k6Cells += @{
-        Script   = 'payload.js'
-        Endpoint = "payload_$size"
-        Load     = $payloadLoad
-        Extra    = @{ SIZE = $size }
-    }
+    $cells += @{ Kind = 'payload'; Tag = "payload_$size"; Load = $payloadLoad; Size = $size; BodyBytes = 0 }
 }
-$k6Cells += @{
-    Script   = 'echo.js'
-    Endpoint = 'echo'
-    Load     = $echoLoad
-    Extra    = @{ BODY_BYTES = '102400' }
-}
+$cells += @{ Kind = 'echo'; Tag = 'echo'; Load = $echoLoad; Size = '1kb'; BodyBytes = 102400 }
 
-$h3Cells = @()
-foreach ($load in $pingLoads) {
-    $h3Cells += @{ Kind = 'ping'; Tag = 'ping'; Load = $load; Size = '1kb'; BodyBytes = 0 }
-}
-foreach ($size in $payloadSizes) {
-    $h3Cells += @{ Kind = 'payload'; Tag = "payload_$size"; Load = $payloadLoad; Size = $size; BodyBytes = 0 }
-}
-$h3Cells += @{ Kind = 'echo'; Tag = 'echo'; Load = $echoLoad; Size = '1kb'; BodyBytes = 102400 }
+$protocols = @()
+if ($Proto -in @('all', 'h3')) { $protocols += 'h3' }
+if ($Proto -in @('all', 'h2')) { $protocols += 'h2' }
+if ($Proto -in @('all', 'h1')) { $protocols += 'h1' }
 
-$k6Protocols = @()
-if ($Proto -in @('all', 'h1')) { $k6Protocols += 'h1' }
-if ($Proto -in @('all', 'h2')) { $k6Protocols += 'h2' }
-
-$runH3 = $Proto -in @('all', 'h3')
-$totalK6 = $k6Protocols.Count * $k6Cells.Count * $reps
-$totalH3 = if ($runH3) { $h3Cells.Count * $reps } else { 0 }
+$totalRuns = $protocols.Count * $cells.Count * $reps
 $secondsPerRun = $Ramp + $Duration + 5
-$estimateMin = [math]::Round((($totalK6 + $totalH3) * $secondsPerRun) / 60, 1)
+$estimateMin = [math]::Round(($totalRuns * $secondsPerRun) / 60, 1)
 
 Write-Host '=== Benchmark matrix ==='
 Write-Host "REPS=$reps ($RepsMode) | PROTO=$Proto | SEED=$Seed"
 Write-Host "Campanha: $resultsDir"
+Write-Host "Gerador: h2load | -c = load | -m 1 | -t 1 | -D ${Duration}s | warm-up ${Ramp}s"
 if (-not $NoPause -and $reps -gt 1) {
     Write-Host "Pausa entre réplicas: ${CooldownSec}s (use -NoPause para execução contínua; -CooldownSec 0 para Enter manual)"
 }
-Write-Host "k6 runs: $totalK6 | h3 runs: $totalH3 | estimativa: ~${estimateMin} min"
+Write-Host "h2load runs: $totalRuns | estimativa: ~${estimateMin} min"
 Write-Host ''
 Write-Host 'Certifique-se de que o lab bench esta no ar:'
 Write-Host "  docker compose -f $ComposeFile up --build -d"
 Write-Host ''
 
 Assert-Command -Name 'curl.exe'
+Assert-Command -Name 'docker'
 Assert-StackHealthy -Attempts 10 -DelaySec 3
 
-if ($k6Protocols.Count) {
-    Assert-Command -Name (Get-K6Path)
-}
-
-if ($runH3) {
-    Assert-Command -Name 'docker'
+Write-Host 'Construindo imagem h2load (usa cache se a imagem já existir)...'
+& docker compose -f (Join-Path $repoRoot $ComposeFile) --profile load build h2load
+if ($LASTEXITCODE -ne 0) {
+    throw 'build da imagem h2load falhou'
 }
 
 for ($rep = 1; $rep -le $reps; $rep++) {
     Write-Host "--- Replica $rep / $reps ---"
     Ensure-StackHealthyBeforeReplica -Rep $rep
 
-    foreach ($protoName in $k6Protocols) {
-        foreach ($cell in $k6Cells) {
-            Invoke-K6Scenario `
-                -Script $cell.Script `
+    foreach ($protoName in $protocols) {
+        foreach ($cell in $cells) {
+            Invoke-H2LoadScenario `
                 -ProtoName $protoName `
-                -Endpoint $cell.Endpoint `
-                -Load $cell.Load `
-                -Rep $rep `
-                -ExtraEnv $cell.Extra
-        }
-    }
-
-    if ($runH3) {
-        foreach ($cell in $h3Cells) {
-            Invoke-H3Scenario `
                 -EndpointKind $cell.Kind `
                 -EndpointTag $cell.Tag `
                 -Load $cell.Load `

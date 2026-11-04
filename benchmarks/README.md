@@ -6,24 +6,26 @@ Roteiro reproduzível para o estudo de caso do TCC (Cap. 4–5). Os scripts mede
 
 | Lacuna | Decisão |
 |--------|---------|
-| **L01** | 10 / 50 / 100 VUs, 60s por execução, ramp-up 10s |
-| **L03** | H/1.1, H/2 e H/3 em `https://localhost:8443`. H/1.1 usa ALPN `http/1.1` (`GODEBUG=http2client=0` no processo do k6). As campanhas `2026-10-01_08-38-06` e `2026-10-15_10-13-06` mediram H/1.1 em `http://localhost:3000` |
+| **L01** | 10 / 50 / 100 clientes (`-c` do h2load), patamar de 60 s (`-D`), aquecimento de 10 s (`--warm-up-time`). O aquecimento é descartado da taxa. Não é o ramp-up de VUs do k6 |
+| **L03** | H/1.1 (`--h1`), H/2 (`--alpn-list=h2`) e H/3 (`--h3`) no mesmo h2load, contra `https://nginx:8443` na rede `bench`. As campanhas `2026-10-01_08-38-06` e `2026-10-15_10-13-06` usaram k6 e curl, e mediram H/1.1 em `http://localhost:3000` |
 | **L04** | Rede degradada via `tc netem` em Docker (ver seção "Rede degradada (R06)") |
 | **L05** | 30 réplicas por célula (modo `full`); mediana + IQR via `bench:agg` |
 
 ## Arquitetura dos caminhos
 
 ```text
-HTTP/1.1  →  https://localhost:8443/bench/*     (k6, ALPN http/1.1 no NGINX)
-HTTP/2    →  https://localhost:8443/bench/*     (k6, ALPN h2 no NGINX)
-HTTP/3    →  https://localhost:8443/bench/*     (curl HTTP/3 em Docker → NGINX QUIC)
+HTTP/1.1  →  https://nginx:8443/bench/*     (h2load --h1)
+HTTP/2    →  https://nginx:8443/bench/*     (h2load --alpn-list=h2)
+HTTP/3    →  https://nginx:8443/bench/*     (h2load --h3)
 ```
 
-> **Limitação:** O k6 não suporta HTTP/3. O caminho H/3 usa cliente QUIC em Docker (`benchmarks/http3/`), com métricas normalizadas para o mesmo schema JSON dos summaries k6.
+O binário é o mesmo nos três. `-c` é o número de clientes, `-m 1` deixa um stream em voo por sessão, `-t 1` fixa uma thread. No NGINX do lab, `keepalive_requests` está em 1000000: o default 1000 fecha a conexão e o h2load não abre outra, então o patamar de 60 s mediria só esse prefixo. `data_received_rate` no JSON da campanha é o `bytes_per_second` do h2load (`bytes_total / duração do patamar`, cabeçalhos e corpo). `http_req_waiting_*` fica vazio: o TTFB do h2load é um valor por conexão, não por requisição.
+
+As pastas `k6/` e `http3/` continuam no repositório. As campanhas de outubro de 2026 foram feitas com elas.
 
 ## Pré-requisitos
 
-- Node.js ≥ 18, Docker, [k6](https://grafana.com/docs/k6/latest/set-up/install-k6/)
+- Node.js ≥ 18, Docker, PowerShell 7 (`pwsh`)
 - API com `BENCHMARK_MODE=true` (desabilita rate limiter)
 - Proxy NGINX para H/1.1, H/2 e H/3: `npm run dev:nginx`
 
@@ -57,15 +59,12 @@ Confirme `res.proto` no k6: `HTTP/1.1` para H/1.1 e `HTTP/2.0` para H/2.
 
 ```text
 benchmarks/
-  k6/
-    lib/config.js    # BASE_URL por PROTO, thresholds, handleSummary
-    ping.js          # GET /bench/ping
-    payload.js       # GET /bench/payload/:size
-    echo.js          # POST /bench/echo
-  http3/
-    run-h3.ps1       # cliente QUIC (Docker)
-    run-load.sh      # carga concorrente com curl --http3-only
-    Dockerfile
+  h2load/
+    Dockerfile       # nghttp2 v1.70.0 com HTTP/3 (aws-lc, nghttp3, ngtcp2)
+    run-h2load.ps1   # uma célula: h1, h2 ou h3
+    map-summary.ts   # --output-file do h2load → schema da campanha
+  k6/                # campanhas de outubro de 2026; a campanha atual não chama
+  http3/             # cliente curl das campanhas de outubro; a campanha atual não chama
   scripts/
     campaign.ps1     # pasta datada da campanha + pausa entre réplicas
     run-all.ps1      # orquestra matriz completa
@@ -95,9 +94,8 @@ Cada célula gera `REPS` arquivos JSON na pasta da campanha (`benchmarks/results
 ### 1. Subir ambiente
 
 ```bash
-# Terminal 1 — API + NGINX
-# Defina BENCHMARK_MODE=true no .env antes de subir
-npm run dev:nginx
+# API e NGINX na rede bench. O h2load entra nessa rede e fala com https://nginx:8443.
+docker compose -f docker-compose.bench.yml up --build -d
 ```
 
 ### 2. Rodar benchmarks
@@ -117,7 +115,7 @@ npm run bench:run -- -Proto h3
 npm run bench:run -- -NoPause
 ```
 
-**Pausa entre réplicas:** por padrão, **600 s (10 min)** de resfriamento após cada réplica (`-CooldownSec`). Com `-Reps 1` não há pausa. Use `-NoPause` para execução contínua ou `-CooldownSec 0` para pausa manual (Enter).
+**Pausa entre réplicas:** por padrão, **180 s** de resfriamento após cada réplica da matriz ideal (`-CooldownSec`). Com `-Reps 1` não há pausa. Use `-NoPause` para execução contínua ou `-CooldownSec 0` para pausa manual (Enter). A submatriz degradada do TCC usa `-NoPause` (sem intervalo).
 
 Parâmetros do runner (`benchmarks/scripts/run-all.ps1`; `run-degraded.ps1` aceita os mesmos `-NoPause`, `-Reps` e `-CooldownSec`):
 
@@ -127,8 +125,8 @@ Parâmetros do runner (`benchmarks/scripts/run-all.ps1`; `run-degraded.ps1` acei
 | `-Reps` | inteiro; se > 0, substitui `-RepsMode` | `0` |
 | `-Proto` | `all`, `h1`, `h2`, `h3` | `all` |
 | `-Duration` | segundos | `60` |
-| `-Ramp` | segundos | `10` |
-| `-CooldownSec` | segundos entre réplicas | `600` |
+| `-Ramp` | segundos de `--warm-up-time` (não é ramp-up de VUs) | `10` |
+| `-CooldownSec` | segundos entre réplicas, matriz ideal | `180` |
 | `-NoPause` | switch | desliga pausa |
 
 Ao iniciar, o runner imprime o caminho da campanha; ao terminar, sugere o comando de agregação com esse caminho.
@@ -157,26 +155,17 @@ A mediana e o IQR descrevem a célula. Para comparar HTTP/2 com HTTP/3 na mesma 
 npm run bench:compare -- benchmarks/results/2026-10-15_10-13-06
 ```
 
-### 4. Execução individual (k6)
+### 4. Uma célula com h2load
 
-```bash
-# GODEBUG fica no processo do k6. --env nao desliga o HTTP/2.
-GODEBUG=http2client=0 k6 run --env PROTO=h1 --env ENDPOINT=ping --env LOAD=50 --env REP=1 \
-  --env OUT=benchmarks/results/h1_ping_50_r01.json \
-  benchmarks/k6/ping.js
-
-k6 run --env PROTO=h2 --env ENDPOINT=payload_1mb --env SIZE=1mb --env LOAD=50 \
-  --env OUT=benchmarks/results/h2_payload_1mb_50_r01.json \
-  benchmarks/k6/payload.js
-```
-
-### 5. Execução individual (HTTP/3)
+O lab `docker-compose.bench.yml` precisa estar no ar. O cliente entra na rede `bench` e fala com `https://nginx:8443`.
 
 ```powershell
-pwsh benchmarks/http3/run-h3.ps1 -Endpoint ping -Load 50 -Rep 1
-pwsh benchmarks/http3/run-h3.ps1 -Endpoint payload -Size 100kb -Load 50 -Rep 1
-pwsh benchmarks/http3/run-h3.ps1 -Endpoint echo -Load 50 -BodyBytes 102400 -Rep 1
+pwsh benchmarks/h2load/run-h2load.ps1 -Proto h1 -Endpoint ping -Load 10 -Duration 5 -Warmup 1 -Rep 1
+pwsh benchmarks/h2load/run-h2load.ps1 -Proto h2 -Endpoint payload -Size 1kb -Load 50 -Rep 1
+pwsh benchmarks/h2load/run-h2load.ps1 -Proto h3 -Endpoint echo -Load 50 -BodyBytes 102400 -Rep 1
 ```
+
+Os scripts em `k6/` e `benchmarks/http3/` reproduzem o gerador das campanhas de outubro. A matriz atual não os chama.
 
 ## Schema do summary JSON
 
@@ -190,7 +179,7 @@ pwsh benchmarks/http3/run-h3.ps1 -Endpoint echo -Load 50 -BodyBytes 102400 -Rep 
     "seed": "a1b2c3d4",
     "network_profile": "clean",
     "timestamp": "2026-09-06T20:00:00.000Z",
-    "tool": "k6"
+    "tool": "h2load"
   },
   "metrics": {
     "http_req_duration_p50": 1.2,
@@ -202,9 +191,9 @@ pwsh benchmarks/http3/run-h3.ps1 -Endpoint echo -Load 50 -BodyBytes 102400 -Rep 
 }
 ```
 
-Métricas alinhadas ao §2.8 do TCC: latência, tempo de resposta (`http_req_duration`), TTFB (`http_req_waiting`), throughput (`data_*_rate`) e req/s (`http_reqs_rate`).
+Métricas alinhadas ao §2.8 do TCC: latência e tempo de resposta (`http_req_duration`, em ms, a partir dos segundos de `performance.request`), req/s (`http_reqs_rate` = `request_per_second` do patamar) e throughput (`data_received_rate` = `bytes_per_second`, total de bytes incluindo cabeçalhos). `http_req_waiting_*` fica `null`. `observed_proto` é o protocolo pedido pela flag (`--h1`, `--alpn-list=h2` ou `--h3`). A confirmação de que o NGINX falou esse protocolo está no access log (`protocol="$server_protocol"`).
 
-O summary do k6 2.2.0 não exporta a tag de um contador. O script grava `observed_proto` a partir dos contadores `observed_http11` e `observed_http20`. Nos JSON das campanhas arquivadas esse campo ficou `rate`.
+O summary do k6 2.2.0, nas campanhas arquivadas, não exporta a tag de um contador. O script antigo grava `observed_proto` a partir dos contadores `observed_http11` e `observed_http20`. Nos JSON das campanhas arquivadas esse campo ficou `rate`.
 
 A tag `network_profile` identifica o perfil de rede da execução (`clean` por padrão; ver seção abaixo). O agregador agrupa por `(proto, endpoint, load, network_profile)`.
 
@@ -270,25 +259,24 @@ Com o lab no ar e um perfil aplicado, confirme que a latência sobe nos três pr
 curl -k --http1.1 -s -o /dev/null -w "h1 time_total=%{time_total}\n" https://localhost:8443/bench/ping
 # H/2 (NGINX, ALPN h2)
 curl -k -s -o /dev/null -w "h2 time_total=%{time_total}\n" --http2 https://localhost:8443/bench/ping
-# H/3 (cliente QUIC em Docker)
-docker run --rm --add-host=host.docker.internal:host-gateway alpine/curl-http3 \
-  curl -k -s -o /dev/null -w "h3 time_total=%{time_total}\n" --http3-only https://host.docker.internal:8443/bench/ping
+# H/3 (h2load na rede bench, célula curta)
+pwsh benchmarks/h2load/run-h2load.ps1 -Proto h3 -Endpoint ping -Load 1 -Duration 5 -Warmup 0 -Rep 1
 ```
 
-Com `lag_100ms`, `time_total` deve subir ~0.1s acima do `clean` nos três. Se só h1/h2 mudarem e h3 não (ou vice-versa), revise a interface/subnet nos scripts de netem.
+Com `lag_100ms`, o `time_total` do curl deve subir cerca de 0,1 s acima do `clean` em H/1.1 e H/2. No H/3, o `p95_ms` impresso pelo conversor do h2load deve subir na mesma ordem. Se só uma parte mudar, revise a interface e a subnet nos scripts de netem.
 
 ### Pré-requisitos
 
-- Docker Desktop em execução; `pwsh` e `k6` instalados (mesmos pré-requisitos dos demais benchmarks); `bash` disponível.
+- Docker Desktop em execução; `pwsh` e `bash` disponíveis. A imagem `quicbench-h2load:1.70.0` é construída pelo runner.
 
 ## Troubleshooting
 
 | Problema | Ação |
 |----------|------|
-| k6 não encontrado | Instale k6 e reinicie o terminal |
-| `connection refused` em :3000 | Suba a API com `BENCHMARK_MODE=true` |
-| H/1.1, H/2 ou H/3 falham em :8443 | `npm run dev:nginx` ou `npm run proxy:up` |
-| HTTP/3 Docker falha | Verifique UDP 8443; teste curl manual acima |
+| Imagem h2load ausente ou sem `--h3` | `docker compose -f docker-compose.bench.yml --profile load build h2load` e confira `h2load --help` |
+| `connection refused` em :3000 | Suba o lab com `docker compose -f docker-compose.bench.yml up --build -d` |
+| H/1.1, H/2 ou H/3 falham em :8443 | O lab bench publica 8443/tcp e 8443/udp. Confira o access log do NGINX |
+| HTTP/3 não conecta | UDP na rede `bench` até `nginx:8443`. Rode primeiro uma célula curta com `-Proto h3` |
 | Rate limit nos testes | Confirme `BENCHMARK_MODE=true` no `.env` |
 | `summary` vazio no agg | Rode `bench:run` antes; JSON na pasta da campanha (`*_rNN.json`); use `bench:agg -- <caminho>` se não for a mais recente |
 | netem sem efeito | Containers precisam de `NET_ADMIN` e `iproute2` (já no `docker-compose.bench.yml` / Dockerfiles); valide com os `curl` da seção Rede degradada |
@@ -299,7 +287,7 @@ Com `lag_100ms`, `time_total` deve subir ~0.1s acima do `clean` nos três. Se s�
 | Matriz | Artefato |
 |--------|----------|
 | R03 | Este README + caminhos H/1.1 / H/2 / H/3 |
-| R04 | `scripts/run-all.ps1` + `k6/*.js` |
+| R04 | `scripts/run-all.ps1` + `h2load/run-h2load.ps1` |
 | R05 | Cenários `payload` e `echo` na matriz |
 | R06 | `docker-compose.bench.yml` + `netem/` + `scripts/run-degraded.ps1` (seção "Rede degradada") |
 | R08 | `npm run bench:run` + `npm run bench:agg` |

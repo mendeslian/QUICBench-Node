@@ -1,0 +1,17 @@
+{
+  "warmup_sec": 10,
+  "network_profile": "clean",
+  "reps": 10,
+  "base_url": "https://nginx:8443",
+  "tool": "h2load",
+  "started_at": "2026-11-03T01:02:21.0815015Z",
+  "duration_sec": 60,
+  "cooldown_sec": 180,
+  "threads": 1,
+  "proto": "all",
+  "nginx_keepalive_requests": 1000000,
+  "max_concurrent_streams": 1,
+  "campaign": "ideal_matrix",
+  "clients": "-c = load",
+  "seed": "f8e9e35c"
+}

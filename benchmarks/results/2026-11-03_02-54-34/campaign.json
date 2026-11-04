@@ -1,0 +1,19 @@
+{
+  "load": 50,
+  "nginx_keepalive_requests": 1000000,
+  "endpoint": "ping",
+  "base_url": "https://nginx:8443",
+  "campaign": "degraded_r06",
+  "proto": "all",
+  "warmup_sec": 10,
+  "max_concurrent_streams": 1,
+  "cooldown_sec": 0,
+  "threads": 1,
+  "duration_sec": 60,
+  "started_at": "2026-11-03T05:54:34.7447522Z",
+  "reps": 10,
+  "clients": "-c = load",
+  "network_profiles": "clean,lag_100ms,loss_1pct,lag_100ms_loss_1pct",
+  "seed": "01fd7e86",
+  "tool": "h2load"
+}

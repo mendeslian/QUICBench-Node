@@ -1,0 +1,98 @@
+[
+  {
+    "endpoint": "ping",
+    "load": 50,
+    "network_profile": "clean",
+    "metric": "http_req_duration_p95",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 51,
+    "cliffs_delta": 0.02,
+    "p": 0.9705124596765463,
+    "p_method": "exact"
+  },
+  {
+    "endpoint": "ping",
+    "load": 50,
+    "network_profile": "clean",
+    "metric": "http_reqs_rate",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 57,
+    "cliffs_delta": 0.14,
+    "p": 0.6305289138106476,
+    "p_method": "exact"
+  },
+  {
+    "endpoint": "ping",
+    "load": 50,
+    "network_profile": "lag_100ms",
+    "metric": "http_req_duration_p95",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 98,
+    "cliffs_delta": 0.96,
+    "p": 0.00004330035289787612,
+    "p_method": "exact"
+  },
+  {
+    "endpoint": "ping",
+    "load": 50,
+    "network_profile": "lag_100ms",
+    "metric": "http_reqs_rate",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 40.5,
+    "cliffs_delta": -0.19,
+    "p": 0.1916012416997439,
+    "p_method": "asymptotic"
+  },
+  {
+    "endpoint": "ping",
+    "load": 50,
+    "network_profile": "loss_1pct",
+    "metric": "http_req_duration_p95",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 27,
+    "cliffs_delta": -0.46,
+    "p": 0.08920955205784926,
+    "p_method": "exact"
+  },
+  {
+    "endpoint": "ping",
+    "load": 50,
+    "network_profile": "loss_1pct",
+    "metric": "http_reqs_rate",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 65,
+    "cliffs_delta": 0.3,
+    "p": 0.2798610058671978,
+    "p_method": "exact"
+  },
+  {
+    "endpoint": "ping",
+    "load": 50,
+    "network_profile": "lag_100ms_loss_1pct",
+    "metric": "http_req_duration_p95",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 66,
+    "cliffs_delta": 0.32,
+    "p": 0.24745069172313755,
+    "p_method": "exact"
+  },
+  {
+    "endpoint": "ping",
+    "load": 50,
+    "network_profile": "lag_100ms_loss_1pct",
+    "metric": "http_reqs_rate",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 80,
+    "cliffs_delta": 0.6,
+    "p": 0.023230639329710537,
+    "p_method": "exact"
+  }
+]

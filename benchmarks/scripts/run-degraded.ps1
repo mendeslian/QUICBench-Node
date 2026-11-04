@@ -1,13 +1,13 @@
 # Runner de benchmark sob rede degradada (R06, decisao L04=B).
 #
 # Para cada perfil de rede: aplica netem (benchmarks/netem/apply.sh), roda a
-# submatriz enxuta (endpoint ping, 50 VUs, protocolos h1/h2/h3) e remove o
-# impairment (clear.sh) mesmo em caso de falha.
+# submatriz enxuta (endpoint ping, 50 clientes, protocolos h1/h2/h3 com h2load)
+# e remove o impairment (clear.sh) mesmo em caso de falha.
 #
 # Pre-requisitos:
 #   - Lab de benchmark no ar:
 #       docker compose -f docker-compose.bench.yml up --build -d
-#   - k6 instalado (h1/h2) e Docker (h3)
+#   - Docker (imagem h2load, profile load)
 #   - bash disponivel (macOS/Linux; no Windows use Git Bash/WSL)
 #
 # Uso:
@@ -45,9 +45,8 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'campaign.ps1')
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
-$k6Dir = Join-Path $repoRoot 'benchmarks\k6'
 $netemDir = Join-Path $repoRoot 'benchmarks\netem'
-$h3Script = Join-Path $repoRoot 'benchmarks\http3\run-h3.ps1'
+$h2loadScript = Join-Path $repoRoot 'benchmarks\h2load\run-h2load.ps1'
 $applyScript = Join-Path $netemDir 'apply.sh'
 $clearScript = Join-Path $netemDir 'clear.sh'
 
@@ -59,18 +58,23 @@ if (-not $Seed) {
 $resultsDir = New-CampaignResultsDir -RepoRoot $repoRoot
 
 Write-CampaignManifest -CampaignDir $resultsDir -Metadata @{
-    campaign          = 'degraded_r06'
-    tool              = 'k6+curl-http3'
-    endpoint          = 'ping'
-    load              = $Load
-    network_profiles  = ($Profiles -join ',')
-    seed              = $Seed
-    reps              = $reps
-    duration_sec      = $Duration
-    ramp_sec          = $Ramp
-    cooldown_sec      = if ($NoPause) { 0 } else { $CooldownSec }
-    proto             = $Proto
-    started_at        = (Get-Date).ToUniversalTime().ToString('o')
+    campaign               = 'degraded_r06'
+    tool                   = 'h2load'
+    endpoint               = 'ping'
+    load                   = $Load
+    network_profiles       = ($Profiles -join ',')
+    seed                   = $Seed
+    reps                   = $reps
+    duration_sec           = $Duration
+    warmup_sec             = $Ramp
+    cooldown_sec           = if ($NoPause) { 0 } else { $CooldownSec }
+    proto                  = $Proto
+    base_url               = 'https://nginx:8443'
+    clients                = '-c = load'
+    max_concurrent_streams = 1
+    threads                = 1
+    nginx_keepalive_requests = 1000000
+    started_at             = (Get-Date).ToUniversalTime().ToString('o')
 }
 
 $endpoint = 'ping'
@@ -106,83 +110,42 @@ function Invoke-Netem {
     }
 }
 
-function Invoke-K6Ping {
+function Invoke-H2LoadPing {
     param([string]$ProtoName, [int]$Rep, [string]$NetworkProfile)
 
     $outFile = Join-Path $resultsDir "${ProtoName}_${endpoint}_${Load}_${NetworkProfile}_r$($Rep.ToString('00')).json"
 
-    $envArgs = @{
-        PROTO           = $ProtoName
-        ENDPOINT        = $endpoint
-        LOAD            = "$Load"
-        RAMP            = "$Ramp"
-        DURATION        = "$Duration"
-        REP             = "$Rep"
-        SEED            = $Seed
-        NETWORK_PROFILE = $NetworkProfile
-        OUT             = $outFile
-    }
-
-    $k6Args = @('run')
-    foreach ($pair in $envArgs.GetEnumerator()) {
-        $k6Args += '--env'
-        $k6Args += "$($pair.Key)=$($pair.Value)"
-    }
-    $k6Args += (Join-Path $k6Dir 'ping.js')
-
-    $previousGodebug = $env:GODEBUG
-    try {
-        if ($ProtoName -eq 'h1') {
-            $env:GODEBUG = 'http2client=0'
-        }
-
-        Write-Host "[k6] $ProtoName $endpoint load=$Load profile=$NetworkProfile rep=$Rep"
-        & k6 @k6Args
-        $k6Exit = $LASTEXITCODE
-        if (Test-Path $outFile) {
-            Assert-ObservedProto -SummaryPath $outFile -ProtoName $ProtoName
-        }
-        if ($k6Exit -ne 0) {
-            throw "k6 falhou: $ProtoName $endpoint profile=$NetworkProfile rep=$Rep"
-        }
-    }
-    finally {
-        if ([string]::IsNullOrEmpty($previousGodebug)) {
-            Remove-Item Env:GODEBUG -ErrorAction SilentlyContinue
-        } else {
-            $env:GODEBUG = $previousGodebug
-        }
-    }
-}
-
-function Invoke-H3Ping {
-    param([int]$Rep, [string]$NetworkProfile)
-
-    $outFile = Join-Path $resultsDir "h3_${endpoint}_${Load}_${NetworkProfile}_r$($Rep.ToString('00')).json"
-
-    & $h3Script `
+    & $h2loadScript `
+        -Proto $ProtoName `
         -Endpoint $endpoint `
+        -EndpointTag $endpoint `
         -Load $Load `
         -Duration $Duration `
+        -Warmup $Ramp `
         -Rep $Rep `
         -NetworkProfile $NetworkProfile `
         -Out $outFile `
-        -Seed $Seed
+        -Seed $Seed `
+        -ComposeFile $ComposeFile
+
+    if (Test-Path $outFile) {
+        Assert-ObservedProto -SummaryPath $outFile -ProtoName $ProtoName
+    }
 }
 
-# Protocolos selecionados
-$k6Protocols = @()
-if ($Proto -in @('all', 'h1')) { $k6Protocols += 'h1' }
-if ($Proto -in @('all', 'h2')) { $k6Protocols += 'h2' }
-$runH3 = $Proto -in @('all', 'h3')
+$protocols = @()
+if ($Proto -in @('all', 'h3')) { $protocols += 'h3' }
+if ($Proto -in @('all', 'h2')) { $protocols += 'h2' }
+if ($Proto -in @('all', 'h1')) { $protocols += 'h1' }
 
-$totalRuns = ($k6Protocols.Count + $(if ($runH3) { 1 } else { 0 })) * $Profiles.Count * $reps
+$totalRuns = $protocols.Count * $Profiles.Count * $reps
 $secondsPerRun = $Ramp + $Duration + 5
 $estimateMin = [math]::Round(($totalRuns * $secondsPerRun) / 60, 1)
 
 Write-Host '=== Benchmark rede degradada (R06) ==='
 Write-Host "REPS=$reps ($RepsMode) | PROTO=$Proto | LOAD=$Load | SEED=$Seed"
 Write-Host "Campanha: $resultsDir"
+Write-Host "Gerador: h2load | -c = load | -m 1 | -t 1 | -D ${Duration}s | warm-up ${Ramp}s"
 if (-not $NoPause -and $reps -gt 1) {
     Write-Host 'Pausa entre réplicas: ativa (use -NoPause para execução contínua)'
 }
@@ -193,8 +156,13 @@ Write-Host 'Pre-requisito: docker compose -f docker-compose.bench.yml up --build
 Write-Host ''
 
 Assert-Command -Name 'bash'
-if ($k6Protocols.Count) { Assert-Command -Name 'k6' }
-if ($runH3) { Assert-Command -Name 'docker' }
+Assert-Command -Name 'docker'
+
+Write-Host 'Construindo imagem h2load (usa cache se a imagem já existir)...'
+& docker compose -f (Join-Path $repoRoot $ComposeFile) --profile load build h2load
+if ($LASTEXITCODE -ne 0) {
+    throw 'build da imagem h2load falhou'
+}
 
 foreach ($profile in $Profiles) {
     Write-Host "===== Perfil de rede: $profile ====="
@@ -204,12 +172,8 @@ foreach ($profile in $Profiles) {
         for ($rep = 1; $rep -le $reps; $rep++) {
             Write-Host "--- $profile | Replica $rep / $reps ---"
 
-            foreach ($protoName in $k6Protocols) {
-                Invoke-K6Ping -ProtoName $protoName -Rep $rep -NetworkProfile $profile
-            }
-
-            if ($runH3) {
-                Invoke-H3Ping -Rep $rep -NetworkProfile $profile
+            foreach ($protoName in $protocols) {
+                Invoke-H2LoadPing -ProtoName $protoName -Rep $rep -NetworkProfile $profile
             }
 
             Wait-ForNextReplica -CompletedRep $rep -TotalReps $reps -NoPause:$NoPause -CooldownSec $CooldownSec

@@ -65,6 +65,19 @@ services:
       bench:
         ipv4_address: 172.30.0.20
 
+  # Não sobe com `up -d`. A campanha chama
+  #   docker compose -f docker-compose.bench.yml --profile load run --rm --no-deps h2load
+  h2load:
+    profiles:
+      - load
+    build:
+      context: ./benchmarks/h2load
+      dockerfile: Dockerfile
+    image: quicbench-h2load:1.70.0
+    entrypoint: ["h2load"]
+    networks:
+      - bench
+
 networks:
   bench:
     driver: bridge

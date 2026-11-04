@@ -54,6 +54,7 @@ function Assert-ObservedProto {
     $expected = @{
         h1 = 'HTTP/1.1'
         h2 = 'HTTP/2.0'
+        h3 = 'HTTP/3'
     }[$ProtoName]
 
     if (-not $expected) {
