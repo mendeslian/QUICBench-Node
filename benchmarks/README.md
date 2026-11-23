@@ -219,7 +219,7 @@ Os scripts em `k6/` e `benchmarks/http3/` reproduzem o gerador das campanhas de 
 }
 ```
 
-Métricas alinhadas ao §2.8 do TCC: latência e tempo de resposta (`http_req_duration`, em ms, a partir dos segundos de `performance.request`), req/s (`http_reqs_rate` = `request_per_second` do patamar) e throughput (`data_received_rate` = `bytes_per_second`, total de bytes incluindo cabeçalhos). `http_req_waiting_*` fica `null`. `observed_proto` é o protocolo pedido pela flag (`--h1`, `--alpn-list=h2` ou `--h3`). A confirmação de que o NGINX falou esse protocolo está no access log (`protocol="$server_protocol"`).
+Métricas alinhadas ao §2.8 do TCC: latência e tempo de resposta (`http_req_duration`, em ms, a partir dos segundos de `performance.request`), req/s (`http_reqs_rate` = sucessos / duração do patamar) e throughput (`data_received_rate` = `bytes_per_second`, total de bytes incluindo cabeçalhos). `http_req_waiting_*` fica `null`. `observed_proto` é o protocolo pedido pela flag (`--h1`, `--alpn-list=h2` ou `--h3`). A confirmação de que o NGINX falou esse protocolo está no access log (`protocol="$server_protocol"`).
 
 O summary do k6 2.2.0, nas campanhas arquivadas, não exporta a tag de um contador. O script antigo grava `observed_proto` a partir dos contadores `observed_http11` e `observed_http20`. Nos JSON das campanhas arquivadas esse campo ficou `rate`.
 

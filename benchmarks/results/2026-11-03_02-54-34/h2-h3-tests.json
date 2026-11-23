@@ -66,9 +66,9 @@
     "metric": "http_reqs_rate",
     "n_h2": 10,
     "n_h3": 10,
-    "u_h2": 65,
-    "cliffs_delta": 0.3,
-    "p": 0.2798610058671978,
+    "u_h2": 64,
+    "cliffs_delta": 0.28,
+    "p": 0.3149992422438243,
     "p_method": "exact"
   },
   {

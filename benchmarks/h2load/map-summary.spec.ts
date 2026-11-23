@@ -52,7 +52,7 @@ describe('mapH2LoadDocument', () => {
     expect(summary.metrics.http_req_duration_avg).toBe(15);
     // n=4, floor(4 * 0.9) = 3, amostra ordenada 0.04 s.
     expect(summary.metrics.http_req_duration_p90).toBe(40);
-    expect(summary.metrics.http_reqs_rate).toBe(100);
+    expect(summary.metrics.http_reqs_rate).toBe((500 * 100) / 502);
     expect(summary.metrics.http_reqs_count).toBe(500);
     expect(summary.metrics.data_received_rate).toBe(1234);
     expect(summary.metrics.data_sent_rate).toBeNull();
