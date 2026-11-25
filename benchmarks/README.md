@@ -19,7 +19,7 @@ HTTP/2    →  https://nginx:8443/bench/*     (h2load --alpn-list=h2)
 HTTP/3    →  https://nginx:8443/bench/*     (h2load --h3)
 ```
 
-O binário é o mesmo nos três. `-c` é o número de clientes, `-m 1` deixa um stream em voo por sessão, `-t 1` fixa uma thread. No NGINX do lab, `keepalive_requests` está em 1000000: o default 1000 fecha a conexão e o h2load não abre outra, então o patamar de 60 s mediria só esse prefixo. `data_received_rate` no JSON da campanha é o `bytes_per_second` do h2load (`bytes_total / duração do patamar`, cabeçalhos e corpo). `http_req_waiting_*` fica vazio: o TTFB do h2load é um valor por conexão, não por requisição.
+O binário é o mesmo nos três. `-c` é o número de clientes, `-m 1` deixa um stream em voo por sessão. A matriz original fixa `-t 1`. Com um thread, o HTTP/2 no GET de 1 MB e no POST de 100 KB deixa tempo fora da amostra: taxa vezes latência média fica abaixo de `-c`. A repetição dessas células usa `-t 4`, e aí o produto volta a cerca de 50. O GET de 100 KB com `-t 4` continua fechando em 50. No NGINX do lab, `keepalive_requests` está em 1000000: o default 1000 fecha a conexão e o h2load não abre outra, então o patamar de 60 s mediria só esse prefixo. `data_received_rate` no JSON da campanha é o `bytes_per_second` do h2load (`bytes_total / duração do patamar`, cabeçalhos e corpo). `http_req_waiting_*` fica vazio: o TTFB do h2load é um valor por conexão, não por requisição.
 
 As pastas `k6/` e `http3/` continuam no repositório. As campanhas de outubro de 2026 foram feitas com elas.
 
