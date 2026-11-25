@@ -1,0 +1,19 @@
+{
+  "seed": "ee88d97e",
+  "base_url": "https://nginx:8443",
+  "log_level": "warn",
+  "threads": 1,
+  "campaign": "ping_only",
+  "api_start": "node dist/server.js",
+  "tool": "h2load",
+  "cooldown_sec": 0,
+  "max_concurrent_streams": 1,
+  "warmup_sec": 10,
+  "duration_sec": 60,
+  "clients": "-c = load",
+  "nginx_keepalive_requests": 1000000,
+  "network_profile": "clean",
+  "reps": 10,
+  "started_at": "2026-11-25T03:27:15.5331058Z",
+  "proto": "all"
+}

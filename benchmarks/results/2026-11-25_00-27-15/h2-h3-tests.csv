@@ -1,0 +1,7 @@
+endpoint,load,network_profile,metric,n_h2,n_h3,u_h2,cliffs_delta,p,p_method
+ping,10,clean,http_req_duration_p95,10,10,0,-1,0.0000108250882245,exact
+ping,10,clean,http_reqs_rate,10,10,94,0.88,0.000324752646734,exact
+ping,50,clean,http_req_duration_p95,10,10,1,-0.98,0.0000216501764489,exact
+ping,50,clean,http_reqs_rate,10,10,100,1,0.0000108250882245,exact
+ping,100,clean,http_req_duration_p95,10,10,36,-0.28,0.314999242244,exact
+ping,100,clean,http_reqs_rate,10,10,90,0.8,0.0015046872632,exact

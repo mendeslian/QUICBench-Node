@@ -81,6 +81,28 @@ function asNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
+/**
+ * Sucessos / duração do patamar. O h2load grava request_per_second como
+ * total / duração, então a duração é total / request_per_second.
+ * Sem falha, o valor permanece request_per_second.
+ */
+function successesPerSecond(
+  requestPerSecond: number | null,
+  succeeded: number | null,
+  total: number | null,
+): number | null {
+  if (
+    requestPerSecond != null &&
+    succeeded != null &&
+    total != null &&
+    total > 0 &&
+    succeeded !== total
+  ) {
+    return (succeeded * requestPerSecond) / total;
+  }
+  return requestPerSecond;
+}
+
 function secondsToMs(value: number | null, field: string): number | null {
   if (value == null) return null;
   if (value > DURATION_SECONDS_LIMIT) {
@@ -129,6 +151,7 @@ export function mapH2LoadDocument(
 
   const requests = isRecord(measurements.requests) ? measurements.requests : {};
   const total = asNumber(requests.total);
+  const succeeded = asNumber(requests.succeeded);
   const failed = asNumber(requests.failed);
   const samples = Array.isArray(request.samples)
     ? request.samples.filter(
@@ -156,8 +179,12 @@ export function mapH2LoadDocument(
       http_req_waiting_p50: null,
       http_req_waiting_p90: null,
       http_req_waiting_p95: null,
-      http_reqs_rate: asNumber(measurements.request_per_second),
-      http_reqs_count: asNumber(requests.succeeded),
+      http_reqs_rate: successesPerSecond(
+        asNumber(measurements.request_per_second),
+        succeeded,
+        total,
+      ),
+      http_reqs_count: succeeded,
       data_received_rate: asNumber(measurements.bytes_per_second),
       data_sent_rate: null,
       http_req_failed_rate:

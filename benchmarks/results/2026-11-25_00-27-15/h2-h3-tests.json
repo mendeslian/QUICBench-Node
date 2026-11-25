@@ -1,0 +1,74 @@
+[
+  {
+    "endpoint": "ping",
+    "load": 10,
+    "network_profile": "clean",
+    "metric": "http_req_duration_p95",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 0,
+    "cliffs_delta": -1,
+    "p": 0.00001082508822446903,
+    "p_method": "exact"
+  },
+  {
+    "endpoint": "ping",
+    "load": 10,
+    "network_profile": "clean",
+    "metric": "http_reqs_rate",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 94,
+    "cliffs_delta": 0.88,
+    "p": 0.0003247526467340709,
+    "p_method": "exact"
+  },
+  {
+    "endpoint": "ping",
+    "load": 50,
+    "network_profile": "clean",
+    "metric": "http_req_duration_p95",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 1,
+    "cliffs_delta": -0.98,
+    "p": 0.00002165017644893806,
+    "p_method": "exact"
+  },
+  {
+    "endpoint": "ping",
+    "load": 50,
+    "network_profile": "clean",
+    "metric": "http_reqs_rate",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 100,
+    "cliffs_delta": 1,
+    "p": 0.00001082508822446903,
+    "p_method": "exact"
+  },
+  {
+    "endpoint": "ping",
+    "load": 100,
+    "network_profile": "clean",
+    "metric": "http_req_duration_p95",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 36,
+    "cliffs_delta": -0.28,
+    "p": 0.3149992422438243,
+    "p_method": "exact"
+  },
+  {
+    "endpoint": "ping",
+    "load": 100,
+    "network_profile": "clean",
+    "metric": "http_reqs_rate",
+    "n_h2": 10,
+    "n_h3": 10,
+    "u_h2": 90,
+    "cliffs_delta": 0.8,
+    "p": 0.001504687263201195,
+    "p_method": "exact"
+  }
+]

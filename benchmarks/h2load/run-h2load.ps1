@@ -12,6 +12,7 @@
     [int]$Load = 50,
     [int]$Duration = 60,
     [int]$Warmup = 10,
+    [int]$Threads = 1,
     [int]$Rep = 1,
     [string]$Size = '1kb',
     [int]$BodyBytes = 102400,
@@ -78,7 +79,7 @@ $dockerArgs += @(
     'h2load',
     '-c', "$Load",
     '-m', '1',
-    '-t', '1',
+    '-t', "$Threads",
     '-D', "${Duration}s"
 )
 

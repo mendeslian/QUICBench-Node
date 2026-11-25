@@ -18,5 +18,8 @@ benchmarks/results/*
 !benchmarks/results/2026-10-15_10-13-06/
 !benchmarks/results/2026-11-02_22-02-21/
 !benchmarks/results/2026-11-03_02-54-34/
+!benchmarks/results/2026-11-24_23-57-34-ping-stats-before/
+!benchmarks/results/2026-11-25_00-27-15/
+!benchmarks/results/2026-11-25_09-35-40/
 !benchmarks/results/probe-h3-client-split/
 !benchmarks/results/alt-svc-fallback/

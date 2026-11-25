@@ -1,0 +1,20 @@
+{
+  "threads": 4,
+  "log_level": "warn",
+  "network_profile": "clean",
+  "proto": "all",
+  "cells": "payload_1mb,echo",
+  "cooldown_sec": 0,
+  "duration_sec": 60,
+  "nginx_keepalive_requests": 1000000,
+  "tool": "h2load",
+  "started_at": "2026-11-25T12:35:40.8386646Z",
+  "seed": "22572803",
+  "api_start": "node dist/server.js",
+  "max_concurrent_streams": 1,
+  "warmup_sec": 10,
+  "base_url": "https://nginx:8443",
+  "reps": 10,
+  "clients": "-c = load",
+  "campaign": "ideal_matrix"
+}

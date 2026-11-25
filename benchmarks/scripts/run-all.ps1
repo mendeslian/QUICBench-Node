@@ -16,7 +16,19 @@ param(
 
     [string]$ComposeFile = 'docker-compose.bench.yml',
 
-    [switch]$NoPause
+    [switch]$NoPause,
+
+    # So GET /bench/ping nas cargas 10, 50 e 100. Payload e echo ficam de fora.
+    [switch]$OnlyPing,
+
+    # Threads do h2load (-t). O padrão 1 é o da matriz original.
+    # A repetição do GET de 1 MB e do POST echo usa 4: com 1 thread o
+    # HTTP/2 deixa tempo fora da amostra e taxa × média fica abaixo de -c.
+    [int]$Threads = 1,
+
+    # Tags de célula, separadas por vírgula. Vazio percorre a matriz inteira.
+    # Ex.: payload_1mb,echo
+    [string]$OnlyCell = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -34,7 +46,9 @@ if (-not $Seed) {
 $resultsDir = New-CampaignResultsDir -RepoRoot $repoRoot
 
 Write-CampaignManifest -CampaignDir $resultsDir -Metadata @{
-    campaign                = 'ideal_matrix'
+    campaign                = if ($OnlyPing) { 'ping_only' } else { 'ideal_matrix' }
+    api_start               = 'node dist/server.js'
+    log_level               = 'warn'
     tool                    = 'h2load'
     network_profile         = 'clean'
     seed                    = $Seed
@@ -46,7 +60,8 @@ Write-CampaignManifest -CampaignDir $resultsDir -Metadata @{
     base_url                = 'https://nginx:8443'
     clients                 = '-c = load'
     max_concurrent_streams  = 1
-    threads                 = 1
+    threads                 = $Threads
+    cells                   = $OnlyCell
     nginx_keepalive_requests = 1000000
     started_at              = (Get-Date).ToUniversalTime().ToString('o')
 }
@@ -105,7 +120,8 @@ function Invoke-H2LoadScenario {
         [int]$Rep,
         [string]$Size = '1kb',
         [int]$BodyBytes = 0,
-        [string]$NetworkProfile = 'clean'
+        [string]$NetworkProfile = 'clean',
+        [int]$Threads = 1
     )
 
     $outFile = Join-Path $resultsDir "${ProtoName}_${EndpointTag}_${Load}_r$($Rep.ToString('00')).json"
@@ -123,7 +139,8 @@ function Invoke-H2LoadScenario {
         -Out $outFile `
         -Seed $Seed `
         -NetworkProfile $NetworkProfile `
-        -ComposeFile $ComposeFile
+        -ComposeFile $ComposeFile `
+        -Threads $Threads
 
     if (Test-Path $outFile) {
         Assert-ObservedProto -SummaryPath $outFile -ProtoName $ProtoName
@@ -137,12 +154,32 @@ $echoLoad = 50
 
 $cells = @()
 foreach ($load in $pingLoads) {
-    $cells += @{ Kind = 'ping'; Tag = 'ping'; Load = $load; Size = '1kb'; BodyBytes = 0 }
+    $cells += [pscustomobject]@{ Kind = 'ping'; Tag = 'ping'; Load = $load; Size = '1kb'; BodyBytes = 0 }
 }
-foreach ($size in $payloadSizes) {
-    $cells += @{ Kind = 'payload'; Tag = "payload_$size"; Load = $payloadLoad; Size = $size; BodyBytes = 0 }
+if (-not $OnlyPing) {
+    foreach ($size in $payloadSizes) {
+        $cells += [pscustomobject]@{ Kind = 'payload'; Tag = "payload_$size"; Load = $payloadLoad; Size = $size; BodyBytes = 0 }
+    }
+    $cells += [pscustomobject]@{ Kind = 'echo'; Tag = 'echo'; Load = $echoLoad; Size = '1kb'; BodyBytes = 102400 }
 }
-$cells += @{ Kind = 'echo'; Tag = 'echo'; Load = $echoLoad; Size = '1kb'; BodyBytes = 102400 }
+
+if ($OnlyCell) {
+    $wanted = @{}
+    foreach ($name in ($OnlyCell -split ',')) {
+        $trimmed = $name.Trim()
+        if ($trimmed) { $wanted[$trimmed] = $true }
+    }
+    $selected = @()
+    foreach ($candidate in @($cells)) {
+        if ($wanted.ContainsKey([string]$candidate.Tag)) {
+            $selected += $candidate
+        }
+    }
+    if (@($selected).Count -eq 0) {
+        throw "Nenhuma célula corresponde a -OnlyCell $OnlyCell"
+    }
+    $cells = @($selected)
+}
 
 $protocols = @()
 if ($Proto -in @('all', 'h3')) { $protocols += 'h3' }
@@ -156,7 +193,7 @@ $estimateMin = [math]::Round(($totalRuns * $secondsPerRun) / 60, 1)
 Write-Host '=== Benchmark matrix ==='
 Write-Host "REPS=$reps ($RepsMode) | PROTO=$Proto | SEED=$Seed"
 Write-Host "Campanha: $resultsDir"
-Write-Host "Gerador: h2load | -c = load | -m 1 | -t 1 | -D ${Duration}s | warm-up ${Ramp}s"
+Write-Host "Gerador: h2load | -c = load | -m 1 | -t $Threads | -D ${Duration}s | warm-up ${Ramp}s"
 if (-not $NoPause -and $reps -gt 1) {
     Write-Host "Pausa entre réplicas: ${CooldownSec}s (use -NoPause para execução contínua; -CooldownSec 0 para Enter manual)"
 }
@@ -181,7 +218,9 @@ for ($rep = 1; $rep -le $reps; $rep++) {
     Ensure-StackHealthyBeforeReplica -Rep $rep
 
     foreach ($protoName in $protocols) {
-        foreach ($cell in $cells) {
+    $cellCount = @($cells).Count
+    for ($i = 0; $i -lt $cellCount; $i++) {
+            $cell = @($cells)[$i]
             Invoke-H2LoadScenario `
                 -ProtoName $protoName `
                 -EndpointKind $cell.Kind `
@@ -189,7 +228,8 @@ for ($rep = 1; $rep -le $reps; $rep++) {
                 -Load $cell.Load `
                 -Rep $rep `
                 -Size $cell.Size `
-                -BodyBytes $cell.BodyBytes
+                -BodyBytes $cell.BodyBytes `
+                -Threads $Threads
         }
     }
 

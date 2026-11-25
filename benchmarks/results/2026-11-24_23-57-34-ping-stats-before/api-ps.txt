@@ -1,0 +1,6 @@
+PID   COMMAND
+    1 npm exec tsx src/server.ts
+   18 node /app/node_modules/.bin/tsx src/server.ts
+   29 /usr/local/bin/node --require /app/node_modules/tsx/dist/preflight.cjs --import file:///app/node_modules/tsx/dist/loader.mjs src/server.ts
+   41 /app/node_modules/@esbuild/linux-x64/bin/esbuild --service=0.28.2 --ping
+  153 ps -o pid,args

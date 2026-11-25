@@ -17,7 +17,7 @@
     "http_req_waiting_p50": null,
     "http_req_waiting_p90": null,
     "http_req_waiting_p95": null,
-    "http_reqs_rate": 1516.46667,
+    "http_reqs_rate": 1313.66667,
     "http_reqs_count": 78820,
     "data_received_rate": 970643,
     "data_sent_rate": null,

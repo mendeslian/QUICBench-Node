@@ -1,0 +1,54 @@
+[2026-11-25T03:15:16.6041782Z] h2_ping_10_r01
+quicbench-node-nginx-1 cpu=41.15% mem=16.63MiB / 7.702GiB net=2.45GB / 1.71GB
+quicbench-node-api-1 cpu=109.39% mem=175.8MiB / 7.702GiB net=296MB / 1.58GB
+quicbench-node-h2load-run-210e46c1ceb6 cpu=21.02% mem=2.609MiB / 7.702GiB net=2.97MB / 420kB
+
+[2026-11-25T03:15:23.7821426Z] h2_ping_10_r01
+quicbench-node-h2load-run-210e46c1ceb6 cpu=20.17% mem=2.609MiB / 7.702GiB net=12.4MB / 1.74MB
+quicbench-node-nginx-1 cpu=41.48% mem=16.73MiB / 7.702GiB net=2.46GB / 1.73GB
+quicbench-node-api-1 cpu=107.41% mem=207.5MiB / 7.702GiB net=298MB / 1.59GB
+
+[2026-11-25T03:15:30.9100891Z] h2_ping_10_r01
+quicbench-node-h2load-run-210e46c1ceb6 cpu=21.70% mem=3.359MiB / 7.702GiB net=22.5MB / 3.14MB
+quicbench-node-nginx-1 cpu=42.84% mem=16.71MiB / 7.702GiB net=2.48GB / 1.74GB
+quicbench-node-api-1 cpu=109.89% mem=219.1MiB / 7.702GiB net=301MB / 1.61GB
+
+[2026-11-25T03:15:37.5172153Z] h2_ping_10_r01
+quicbench-node-h2load-run-210e46c1ceb6 cpu=21.24% mem=4.359MiB / 7.702GiB net=35.3MB / 4.91MB
+quicbench-node-nginx-1 cpu=43.45% mem=16.82MiB / 7.702GiB net=2.49GB / 1.75GB
+quicbench-node-api-1 cpu=107.25% mem=234.4MiB / 7.702GiB net=304MB / 1.62GB
+
+[2026-11-25T03:15:44.6374682Z] h2_ping_10_r01
+quicbench-node-h2load-run-210e46c1ceb6 cpu=21.78% mem=4.609MiB / 7.702GiB net=48.2MB / 6.71MB
+quicbench-node-nginx-1 cpu=44.38% mem=16.64MiB / 7.702GiB net=2.51GB / 1.77GB
+quicbench-node-api-1 cpu=106.10% mem=257.3MiB / 7.702GiB net=308MB / 1.64GB
+
+[2026-11-25T03:15:51.7492759Z] h2_ping_10_r01
+quicbench-node-h2load-run-210e46c1ceb6 cpu=22.08% mem=4.859MiB / 7.702GiB net=59.2MB / 8.24MB
+quicbench-node-nginx-1 cpu=44.25% mem=17.14MiB / 7.702GiB net=2.53GB / 1.79GB
+quicbench-node-api-1 cpu=107.15% mem=272.5MiB / 7.702GiB net=311MB / 1.66GB
+
+[2026-11-25T03:15:58.8696567Z] h2_ping_10_r01
+quicbench-node-h2load-run-210e46c1ceb6 cpu=21.60% mem=5.859MiB / 7.702GiB net=73MB / 10.2MB
+quicbench-node-nginx-1 cpu=44.20% mem=17.27MiB / 7.702GiB net=2.55GB / 1.8GB
+quicbench-node-api-1 cpu=105.04% mem=294.3MiB / 7.702GiB net=314MB / 1.67GB
+
+[2026-11-25T03:16:05.4664121Z] h2_ping_10_r01
+quicbench-node-h2load-run-210e46c1ceb6 cpu=22.27% mem=6.359MiB / 7.702GiB net=85.9MB / 12MB
+quicbench-node-nginx-1 cpu=43.85% mem=16.31MiB / 7.702GiB net=2.56GB / 1.82GB
+quicbench-node-api-1 cpu=106.18% mem=331.5MiB / 7.702GiB net=317MB / 1.69GB
+
+[2026-11-25T03:16:12.5808088Z] h2_ping_10_r01
+quicbench-node-h2load-run-210e46c1ceb6 cpu=22.32% mem=6.859MiB / 7.702GiB net=98.8MB / 13.8MB
+quicbench-node-nginx-1 cpu=46.67% mem=16.86MiB / 7.702GiB net=2.59GB / 1.83GB
+quicbench-node-api-1 cpu=108.51% mem=319.9MiB / 7.702GiB net=320MB / 1.7GB
+
+[2026-11-25T03:16:19.6973643Z] h2_ping_10_r01
+quicbench-node-h2load-run-210e46c1ceb6 cpu=21.19% mem=7.109MiB / 7.702GiB net=111MB / 15.4MB
+quicbench-node-nginx-1 cpu=44.39% mem=16.89MiB / 7.702GiB net=2.6GB / 1.85GB
+quicbench-node-api-1 cpu=118.90% mem=339.3MiB / 7.702GiB net=323MB / 1.72GB
+
+[2026-11-25T03:16:26.4713093Z] h2_ping_10_r01
+quicbench-node-nginx-1 cpu=7.22% mem=14.5MiB / 7.702GiB net=2.62GB / 1.86GB
+quicbench-node-api-1 cpu=82.87% mem=331.3MiB / 7.702GiB net=325MB / 1.73GB
+

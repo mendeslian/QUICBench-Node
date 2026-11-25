@@ -1,0 +1,10 @@
+image=quicbench-node-api (before compile)
+cmd=npx tsx src/server.ts
+LOG_LEVEL=info
+BENCHMARK_MODE=true
+duration_sec=60
+warmup_sec=10
+reps=1
+network_profile=clean
+started_at=2026-11-25T02:57:34.3182406Z
+stats_retry_finished=2026-11-25T03:25:29.2047355Z
