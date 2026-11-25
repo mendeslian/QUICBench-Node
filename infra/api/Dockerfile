@@ -8,13 +8,14 @@ RUN apk add --no-cache iproute2
 
 WORKDIR /app
 
-# Instala dependencias (inclui devDependencies: tsx roda o TypeScript direto).
+# Instala dependencias (inclui devDependencies: o tsc compila o TypeScript na imagem).
 COPY package.json ./
 RUN npm install --include=dev --no-audit --no-fund
 
 # Codigo-fonte da API.
 COPY tsconfig.json ./
 COPY src ./src
+RUN npx tsc
 
 # Padroes do lab: porta 3000 e rate limiter desabilitado para benchmarks.
 ENV PORT=3000 \
@@ -23,4 +24,4 @@ ENV PORT=3000 \
 
 EXPOSE 3000
 
-CMD ["npx", "tsx", "src/server.ts"]
+CMD ["node", "dist/server.js"]

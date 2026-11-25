@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 
+import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import { recordMetric } from '../services/metrics.service.js';
 
@@ -78,7 +79,9 @@ export function requestMetrics(
       bytesSent,
     };
 
-    log.info(metricData, 'metricas_requisicao');
+    if (!env.BENCHMARK_MODE) {
+      log.info(metricData, 'metricas_requisicao');
+    }
 
     recordMetric({
       timestamp: new Date().toISOString(),

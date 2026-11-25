@@ -16,7 +16,10 @@ param(
 
     [string]$ComposeFile = 'docker-compose.bench.yml',
 
-    [switch]$NoPause
+    [switch]$NoPause,
+
+    # So GET /bench/ping nas cargas 10, 50 e 100. Payload e echo ficam de fora.
+    [switch]$OnlyPing
 )
 
 $ErrorActionPreference = 'Stop'
@@ -34,7 +37,9 @@ if (-not $Seed) {
 $resultsDir = New-CampaignResultsDir -RepoRoot $repoRoot
 
 Write-CampaignManifest -CampaignDir $resultsDir -Metadata @{
-    campaign                = 'ideal_matrix'
+    campaign                = if ($OnlyPing) { 'ping_only' } else { 'ideal_matrix' }
+    api_start               = 'node dist/server.js'
+    log_level               = 'warn'
     tool                    = 'h2load'
     network_profile         = 'clean'
     seed                    = $Seed
@@ -139,10 +144,12 @@ $cells = @()
 foreach ($load in $pingLoads) {
     $cells += @{ Kind = 'ping'; Tag = 'ping'; Load = $load; Size = '1kb'; BodyBytes = 0 }
 }
-foreach ($size in $payloadSizes) {
-    $cells += @{ Kind = 'payload'; Tag = "payload_$size"; Load = $payloadLoad; Size = $size; BodyBytes = 0 }
+if (-not $OnlyPing) {
+    foreach ($size in $payloadSizes) {
+        $cells += @{ Kind = 'payload'; Tag = "payload_$size"; Load = $payloadLoad; Size = $size; BodyBytes = 0 }
+    }
+    $cells += @{ Kind = 'echo'; Tag = 'echo'; Load = $echoLoad; Size = '1kb'; BodyBytes = 102400 }
 }
-$cells += @{ Kind = 'echo'; Tag = 'echo'; Load = $echoLoad; Size = '1kb'; BodyBytes = 102400 }
 
 $protocols = @()
 if ($Proto -in @('all', 'h3')) { $protocols += 'h3' }
